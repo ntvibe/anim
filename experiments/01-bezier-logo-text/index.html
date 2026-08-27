@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Bezier logo + text — anim</title>
+  <link id="googleFontStylesheet" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&display=swap" />
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
@@ -12,25 +13,86 @@
       <div class="stage-wrap">
         <canvas id="stage" width="800" height="450" aria-label="Animation preview"></canvas>
       </div>
+
       <div class="transport">
         <button id="playBtn" type="button">Play</button>
         <button id="restartBtn" type="button" class="secondary">Restart</button>
         <input id="scrubber" type="range" min="0" max="1" step="0.001" value="0" aria-label="Timeline" />
         <output id="timeReadout">0.00 s</output>
       </div>
+
+      <section class="timeline-panel" aria-label="Layer timeline">
+        <div class="timeline-head">
+          <strong>Layer timeline</strong>
+          <span>Drag a bar or its handles. Values are percentages of total duration.</span>
+        </div>
+        <div class="timeline-ruler" aria-hidden="true">
+          <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+        </div>
+        <div id="timeline" class="timeline">
+          <div class="timeline-playhead" aria-hidden="true"></div>
+
+          <div class="timeline-row" data-layer="logo">
+            <div class="timeline-label"><strong>Logo</strong><span id="logoTimingLabel">0–65%</span></div>
+            <div class="timing-track" data-track="logo" tabindex="0" aria-label="Logo animation range">
+              <div class="timing-bar" data-bar="logo">
+                <button class="timing-handle start" type="button" data-handle="logo-start" aria-label="Logo start time"></button>
+                <span class="timing-bar-body">Logo</span>
+                <button class="timing-handle end" type="button" data-handle="logo-end" aria-label="Logo end time"></button>
+              </div>
+            </div>
+            <div class="timing-inputs">
+              <label>Start % <input id="logoStart" type="number" min="0" max="99" step="1" value="0" /></label>
+              <label>End % <input id="logoEnd" type="number" min="1" max="100" step="1" value="65" /></label>
+            </div>
+          </div>
+
+          <div class="timeline-row" data-layer="text">
+            <div class="timeline-label"><strong>Text</strong><span id="textTimingLabel">14–100%</span></div>
+            <div class="timing-track" data-track="text" tabindex="0" aria-label="Text animation range">
+              <div class="timing-bar" data-bar="text">
+                <button class="timing-handle start" type="button" data-handle="text-start" aria-label="Text start time"></button>
+                <span class="timing-bar-body">Text</span>
+                <button class="timing-handle end" type="button" data-handle="text-end" aria-label="Text end time"></button>
+              </div>
+            </div>
+            <div class="timing-inputs">
+              <label>Start % <input id="textStart" type="number" min="0" max="99" step="1" value="14" /></label>
+              <label>End % <input id="textEnd" type="number" min="1" max="100" step="1" value="100" /></label>
+            </div>
+          </div>
+        </div>
+      </section>
     </section>
 
     <aside class="controls">
       <header>
         <h1>Bézier logo + text</h1>
-        <p>One easing curve drives multiple layer recipes. Preview and GIF export use the same Canvas renderer.</p>
+        <p>One easing curve drives layer recipes. Preview and GIF export use the same Canvas renderer.</p>
       </header>
 
       <section class="control-group">
         <h2>Content</h2>
         <label>Headline <input id="headline" type="text" value="MAKE IT MOVE" /></label>
-        <label>Font family <input id="fontFamily" type="text" value="Arial" /></label>
-        <label>Logo image <input id="logoFile" type="file" accept="image/*" /></label>
+        <label>Google Font
+          <div class="inline-control">
+            <input id="fontFamily" type="text" value="Anton" placeholder="e.g. Anton, Roboto Condensed" />
+            <button id="loadFontBtn" type="button" class="secondary compact">Load</button>
+          </div>
+        </label>
+        <p class="hint" id="fontStatus">Anton loaded from Google Fonts.</p>
+        <label>Logo image / SVG <input id="logoFile" type="file" accept="image/*,.svg,image/svg+xml" /></label>
+      </section>
+
+      <section class="control-group">
+        <h2>Canvas</h2>
+        <div class="two-col">
+          <label>Background <input id="bgColor" type="color" value="#f1f1ee" /></label>
+          <label>Logo width (px) <input id="logoSize" type="number" min="20" max="700" step="5" value="190" /></label>
+          <label>Horizontal margin <input id="marginX" type="number" min="0" max="350" step="5" value="60" /></label>
+          <label>Vertical margin <input id="marginY" type="number" min="0" max="200" step="5" value="40" /></label>
+        </div>
+        <label class="check-row"><input id="showMargins" type="checkbox" checked /> Show margin guides</label>
       </section>
 
       <section class="control-group">
@@ -39,10 +101,6 @@
           <label>Duration (ms) <input id="duration" type="number" min="100" max="10000" step="50" value="1400" /></label>
           <label>FPS <input id="fps" type="number" min="8" max="60" step="1" value="30" /></label>
         </div>
-        <label>Text delay
-          <input id="textDelay" type="range" min="0" max="0.8" step="0.01" value="0.14" />
-          <output id="textDelayOut">14%</output>
-        </label>
       </section>
 
       <section class="control-group">
