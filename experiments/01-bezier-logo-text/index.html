@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bezier logo + text — anim</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <main class="app">
+    <section class="stage-panel">
+      <div class="stage-wrap">
+        <canvas id="stage" width="800" height="450" aria-label="Animation preview"></canvas>
+      </div>
+      <div class="transport">
+        <button id="playBtn" type="button">Play</button>
+        <button id="restartBtn" type="button" class="secondary">Restart</button>
+        <input id="scrubber" type="range" min="0" max="1" step="0.001" value="0" aria-label="Timeline" />
+        <output id="timeReadout">0.00 s</output>
+      </div>
+    </section>
+
+    <aside class="controls">
+      <header>
+        <h1>Bézier logo + text</h1>
+        <p>One easing curve drives multiple layer recipes. Preview and GIF export use the same Canvas renderer.</p>
+      </header>
+
+      <section class="control-group">
+        <h2>Content</h2>
+        <label>Headline <input id="headline" type="text" value="MAKE IT MOVE" /></label>
+        <label>Font family <input id="fontFamily" type="text" value="Arial" /></label>
+        <label>Logo image <input id="logoFile" type="file" accept="image/*" /></label>
+      </section>
+
+      <section class="control-group">
+        <h2>Timing</h2>
+        <div class="two-col">
+          <label>Duration (ms) <input id="duration" type="number" min="100" max="10000" step="50" value="1400" /></label>
+          <label>FPS <input id="fps" type="number" min="8" max="60" step="1" value="30" /></label>
+        </div>
+        <label>Text delay
+          <input id="textDelay" type="range" min="0" max="0.8" step="0.01" value="0.14" />
+          <output id="textDelayOut">14%</output>
+        </label>
+      </section>
+
+      <section class="control-group">
+        <div class="group-title-row">
+          <h2>Cubic Bézier</h2>
+          <select id="preset" aria-label="Bezier preset">
+            <option value="custom">Custom</option>
+            <option value="0.22,1,0.36,1" selected>Fast out</option>
+            <option value="0.16,1,0.3,1">Expo out</option>
+            <option value="0.34,1.56,0.64,1">Back-ish</option>
+            <option value="0.65,0,0.35,1">Smooth</option>
+          </select>
+        </div>
+        <svg id="curveViz" viewBox="0 0 260 170" role="img" aria-label="Cubic bezier curve preview">
+          <path class="grid-line" d="M20 150H240M20 20V150" />
+          <path class="guide" id="guide1" />
+          <path class="guide" id="guide2" />
+          <path class="curve" id="curvePath" />
+          <circle class="handle" id="handle1" r="5" />
+          <circle class="handle" id="handle2" r="5" />
+        </svg>
+        <div class="four-col">
+          <label>x1 <input id="x1" type="number" min="0" max="1" step="0.01" value="0.22" /></label>
+          <label>y1 <input id="y1" type="number" min="-2" max="3" step="0.01" value="1" /></label>
+          <label>x2 <input id="x2" type="number" min="0" max="1" step="0.01" value="0.36" /></label>
+          <label>y2 <input id="y2" type="number" min="-2" max="3" step="0.01" value="1" /></label>
+        </div>
+      </section>
+
+      <section class="control-group">
+        <h2>Motion recipe</h2>
+        <div class="two-col">
+          <label>Logo Y (px) <input id="logoY" type="number" min="-400" max="400" value="70" /></label>
+          <label>Logo start scale <input id="logoScale" type="number" min="0" max="3" step="0.05" value="0.82" /></label>
+          <label>Text Y (px) <input id="textY" type="number" min="-400" max="400" value="55" /></label>
+          <label>Text start scale <input id="textScale" type="number" min="0" max="3" step="0.05" value="0.94" /></label>
+        </div>
+      </section>
+
+      <section class="control-group export-group">
+        <h2>Export</h2>
+        <button id="exportBtn" type="button">Export GIF</button>
+        <progress id="exportProgress" max="1" value="0"></progress>
+        <p id="status" role="status" aria-live="polite">Ready.</p>
+      </section>
+    </aside>
+  </main>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
