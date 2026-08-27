@@ -3,271 +3,279 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Logo + typography animation studio — anim</title>
+  <title>Animation Studio — anim</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link id="googleFontStylesheet" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&display=swap" />
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-  <main class="app">
-    <section class="workspace">
-      <div class="stage-toolbar">
-        <div>
-          <strong>Preview</strong>
-          <span id="canvasReadout">800 × 450</span>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="topbar-brand">
+        <div class="product-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M4 18 10.8 5.5 14 11l-4 7H4Zm7.4 0 3.8-6.6L20 18h-8.6Z"/></svg>
         </div>
-        <button id="restartBtn" type="button" class="secondary">Restart</button>
+        <div class="brand-copy">
+          <strong>Animation Studio</strong>
+          <span class="project-divider"></span>
+          <span class="project-name">Fast Logo — Calm Motion</span>
+          <span class="version-badge">v2</span>
+        </div>
       </div>
-
-      <div class="stage-shell">
-        <canvas id="stage" width="800" height="450" aria-label="Animation preview"></canvas>
+      <div class="topbar-actions">
+        <button id="resetBtn" type="button" class="ghost-button">Reset</button>
+        <button id="topExportBtn" type="button" class="primary-button">Export</button>
       </div>
+    </header>
 
-      <div class="transport">
-        <button id="playBtn" type="button">Play</button>
-        <input id="scrubber" type="range" min="0" max="1" step="0.001" value="0" aria-label="Animation playhead" />
-        <output id="timeReadout">0.00 s</output>
+    <nav class="left-rail" aria-label="Application navigation">
+      <div class="rail-main">
+        <button type="button" class="rail-item active" aria-current="page" title="Editor">
+          <svg viewBox="0 0 24 24"><path d="M7 4h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Zm3 4v8l6-4-6-4Z"/></svg>
+          <span>Editor</span>
+        </button>
+        <button type="button" class="rail-item" disabled title="Templates — coming later">
+          <svg viewBox="0 0 24 24"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm2 4v4h4V7H7Zm6 0v4h4V7h-4ZM7 13v4h4v-4H7Zm6 0v4h4v-4h-4Z"/></svg>
+          <span>Templates</span>
+        </button>
+        <button type="button" class="rail-item" disabled title="Assets — coming later">
+          <svg viewBox="0 0 24 24"><path d="M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Zm1 11h12l-4-5-3 4-2-2-3 3Z"/></svg>
+          <span>Assets</span>
+        </button>
+        <button type="button" class="rail-item" disabled title="Projects — coming later">
+          <svg viewBox="0 0 24 24"><path d="M4 6a2 2 0 0 1 2-2h5l2 2h5a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6Z"/></svg>
+          <span>Projects</span>
+        </button>
       </div>
+      <div class="rail-bottom">
+        <button type="button" class="rail-item" disabled title="Settings — coming later">
+          <svg viewBox="0 0 24 24"><path d="M12 8.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7Zm8 3.5-2.1-1.2.1-2.4-2.4-1.4-2 1.3L12 6l-1.6 1.8-2-1.3L6 7.9l.1 2.4L4 11.5v2.9l2.1 1.2-.1 2.4 2.4 1.4 2-1.3L12 20l1.6-1.8 2 1.3 2.4-1.4-.1-2.4 2.1-1.2V12Z"/></svg>
+          <span>Settings</span>
+        </button>
+        <button type="button" class="rail-item" disabled title="Help — coming later">
+          <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18Zm0 13.2a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm0-10.4a3.6 3.6 0 0 0-3.5 2.7l2 .5a1.6 1.6 0 1 1 2 1.9c-1 .4-1.6 1-1.6 2.4v.7h2v-.5c0-.6.2-.8.9-1.1A3.6 3.6 0 0 0 12 5.8Z"/></svg>
+          <span>Help</span>
+        </button>
+      </div>
+    </nav>
 
-      <section class="timeline-panel" aria-label="Layer timeline">
-        <div class="timeline-head">
-          <div>
-            <strong>Layer timeline</strong>
-            <span>Drag bars or their handles. Colored segments show Enter / Hold / Exit.</span>
+    <section class="editor-area">
+      <section class="workspace">
+        <div class="viewport-toolbar">
+          <div class="viewport-left">
+            <strong>Preview</strong>
+            <span id="canvasReadout">800 × 450</span>
           </div>
-          <div class="phase-legend" aria-label="Timeline phase legend">
-            <span><i class="enter"></i>Enter</span>
-            <span><i class="hold"></i>Hold</span>
-            <span><i class="exit"></i>Exit</span>
+          <div class="viewport-center" aria-label="Viewport status">
+            <span>Fit</span>
+            <span class="toolbar-separator"></span>
+            <span>100%</span>
           </div>
         </div>
-        <div class="timeline-ruler" aria-hidden="true">
-          <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
-        </div>
-        <div id="timeline" class="timeline">
-          <div class="timeline-playhead" aria-hidden="true"></div>
 
-          <div class="timeline-row" data-layer="logo">
-            <div class="timeline-label"><strong>Logo</strong><span id="logoTimingLabel">0–100%</span></div>
-            <div class="timing-track" data-track="logo" tabindex="0" aria-label="Logo animation range">
-              <div class="timing-bar" data-bar="logo">
-                <button class="timing-handle start" type="button" data-handle="logo-start" aria-label="Logo start time"></button>
-                <div class="phase-strip" aria-hidden="true">
-                  <span class="phase enter"></span><span class="phase hold"></span><span class="phase exit"></span>
+        <div class="stage-shell">
+          <div class="stage-backdrop" aria-hidden="true"></div>
+          <canvas id="stage" width="800" height="450" aria-label="Animation preview"></canvas>
+        </div>
+
+        <div class="transport">
+          <button id="playBtn" type="button" class="play-button" aria-label="Play animation">
+            <svg viewBox="0 0 24 24"><path d="m8 5 11 7-11 7V5Z"/></svg><span>Play</span>
+          </button>
+          <button id="restartBtn" type="button" class="transport-icon" title="Jump to beginning" aria-label="Jump to beginning">
+            <svg viewBox="0 0 24 24"><path d="M7 5v14H5V5h2Zm12 7-9 6V6l9 6Z"/></svg>
+          </button>
+          <span class="speed-badge">1×</span>
+          <div class="time-cluster"><output id="timeReadout">0.00 s</output><span>/</span><output id="totalTimeReadout">3.00 s</output></div>
+          <input id="scrubber" type="range" min="0" max="1" step="0.001" value="0" aria-label="Animation playhead" />
+        </div>
+
+        <section class="timeline-panel" aria-label="Layer timeline">
+          <div class="timeline-head">
+            <div class="timeline-title-row"><strong>Timeline</strong></div>
+            <div class="phase-legend" aria-label="Timeline phase legend">
+              <span><i class="enter"></i>Enter</span>
+              <span><i class="hold"></i>Hold</span>
+              <span><i class="exit"></i>Exit</span>
+            </div>
+          </div>
+
+          <div class="timeline-grid">
+            <div class="layer-column-head">Layers</div>
+            <div class="timeline-ruler" id="timelineRuler" aria-label="Timeline ruler">
+              <span>0s</span><span>0.75s</span><span>1.50s</span><span>2.25s</span><span>3.00s</span>
+            </div>
+
+            <div class="layer-tree">
+              <div class="layer-row group selected" data-select-layer="lockup"><span class="disclosure">⌄</span><span class="layer-icon">◇</span><strong>Lockup</strong></div>
+              <div class="layer-row child" data-select-layer="logo"><span></span><span class="layer-icon">◈</span><span>Logo Mark</span></div>
+              <div class="layer-row child" data-select-layer="text"><span></span><span class="layer-icon">T</span><span>Claim / Text</span></div>
+              <div class="layer-row" data-select-layer="background"><span></span><span class="layer-icon">▣</span><span>Background</span></div>
+            </div>
+
+            <div id="timeline" class="timeline">
+              <div class="timeline-playhead" aria-hidden="true"></div>
+              <div class="timeline-row group-track" aria-hidden="true"><div class="static-track fill-track"></div></div>
+
+              <div class="timeline-row" data-layer="logo">
+                <div class="timing-track" data-track="logo" tabindex="0" aria-label="Logo animation range">
+                  <div class="timing-bar" data-bar="logo">
+                    <button class="timing-handle start" type="button" data-handle="logo-start" aria-label="Logo start time"></button>
+                    <div class="phase-strip" aria-hidden="true"><span class="phase enter"></span><span class="phase hold"></span><span class="phase exit"></span></div>
+                    <span class="timing-bar-body"><span>Enter</span><span>Hold</span><span>Exit</span></span>
+                    <button class="timing-handle end" type="button" data-handle="logo-end" aria-label="Logo end time"></button>
+                  </div>
                 </div>
-                <span class="timing-bar-body">Logo</span>
-                <button class="timing-handle end" type="button" data-handle="logo-end" aria-label="Logo end time"></button>
+                <div class="timeline-meta"><span id="logoTimingLabel">0–100%</span><div class="timing-inputs"><label>Start % <input id="logoStart" type="number" min="0" max="99" step="1" value="0" /></label><label>End % <input id="logoEnd" type="number" min="1" max="100" step="1" value="100" /></label></div></div>
               </div>
-            </div>
-            <div class="timing-inputs">
-              <label>Start % <input id="logoStart" type="number" min="0" max="99" step="1" value="0" /></label>
-              <label>End % <input id="logoEnd" type="number" min="1" max="100" step="1" value="100" /></label>
-            </div>
-          </div>
 
-          <div class="timeline-row" data-layer="text">
-            <div class="timeline-label"><strong>Text</strong><span id="textTimingLabel">8–100%</span></div>
-            <div class="timing-track" data-track="text" tabindex="0" aria-label="Text animation range">
-              <div class="timing-bar" data-bar="text">
-                <button class="timing-handle start" type="button" data-handle="text-start" aria-label="Text start time"></button>
-                <div class="phase-strip" aria-hidden="true">
-                  <span class="phase enter"></span><span class="phase hold"></span><span class="phase exit"></span>
+              <div class="timeline-row" data-layer="text">
+                <div class="timing-track" data-track="text" tabindex="0" aria-label="Text animation range">
+                  <div class="timing-bar" data-bar="text">
+                    <button class="timing-handle start" type="button" data-handle="text-start" aria-label="Text start time"></button>
+                    <div class="phase-strip" aria-hidden="true"><span class="phase enter"></span><span class="phase hold"></span><span class="phase exit"></span></div>
+                    <span class="timing-bar-body"><span>Enter</span><span>Hold</span><span>Exit</span></span>
+                    <button class="timing-handle end" type="button" data-handle="text-end" aria-label="Text end time"></button>
+                  </div>
                 </div>
-                <span class="timing-bar-body">Text</span>
-                <button class="timing-handle end" type="button" data-handle="text-end" aria-label="Text end time"></button>
+                <div class="timeline-meta"><span id="textTimingLabel">8–100%</span><div class="timing-inputs"><label>Start % <input id="textStart" type="number" min="0" max="99" step="1" value="8" /></label><label>End % <input id="textEnd" type="number" min="1" max="100" step="1" value="100" /></label></div></div>
               </div>
-            </div>
-            <div class="timing-inputs">
-              <label>Start % <input id="textStart" type="number" min="0" max="99" step="1" value="8" /></label>
-              <label>End % <input id="textEnd" type="number" min="1" max="100" step="1" value="100" /></label>
+
+              <div class="timeline-row background-track" aria-hidden="true"><div class="static-track"></div></div>
             </div>
           </div>
-        </div>
+        </section>
       </section>
-    </section>
 
-    <aside class="controls">
-      <header class="controls-header">
-        <div>
-          <h1>Animation Studio</h1>
-          <p>Fast logo + claim motion without opening After Effects.</p>
+      <aside class="controls">
+        <header class="controls-header">
+          <div>
+            <span class="inspector-kicker">Inspector</span>
+            <h1 id="inspectorTitle">Type</h1>
+          </div>
+        </header>
+
+        <nav class="tabs" aria-label="Editor controls">
+          <button type="button" class="tab active" data-tab="typography">Type</button>
+          <button type="button" class="tab" data-tab="lockup">Lockup</button>
+          <button type="button" class="tab" data-tab="logo">Logo</button>
+          <button type="button" class="tab" data-tab="motion">Motion</button>
+          <button type="button" class="tab" data-tab="canvas">Canvas</button>
+          <button type="button" class="tab" data-tab="export">Export</button>
+        </nav>
+
+        <div class="tab-panels">
+          <section class="tab-panel active" data-panel="typography">
+            <div class="section-heading"><h2>Typography</h2><span>Google Fonts</span></div>
+            <label>Claim <input id="headline" type="text" value="MORGEN MACHT MAN HEUTE." /></label>
+            <label>Font family<div class="inline-control"><input id="fontFamily" type="text" value="Anton" placeholder="Anton, Oswald, Roboto Condensed…" /><button id="loadFontBtn" type="button" class="secondary compact">Load</button></div></label>
+            <p class="hint" id="fontStatus">Anton loaded from Google Fonts.</p>
+            <label class="check-row"><input id="autoFit" type="checkbox" checked /> Fit claim to canvas margins</label>
+            <div class="two-col">
+              <label>Font size <div class="unit-field"><input id="fontSize" type="number" min="10" max="400" step="1" value="52" /><span>px</span></div></label>
+              <label>Weight <input id="fontWeight" type="number" min="100" max="900" step="100" value="400" /></label>
+              <label>Letter spacing <div class="unit-field"><input id="letterSpacing" type="number" min="-10" max="40" step="0.5" value="2" /><span>px</span></div></label>
+              <label>Word spacing <div class="unit-field"><input id="wordSpacing" type="number" min="-20" max="80" step="1" value="0" /><span>px</span></div></label>
+            </div>
+            <div class="two-col">
+              <label>Text casing<select id="textTransform"><option value="none">As typed</option><option value="uppercase" selected>UPPERCASE</option><option value="capitalize">Capitalize</option><option value="lowercase">lowercase</option></select></label>
+              <label>Text color <input id="textColor" type="color" value="#ffffff" /></label>
+            </div>
+          </section>
+
+          <section class="tab-panel" data-panel="lockup">
+            <div class="section-heading"><h2>Lockup</h2><span>Logo + claim</span></div>
+            <label>Text position<select id="position"><option value="below" selected>Below logo</option><option value="above">Above logo</option><option value="right">Right of logo</option><option value="left">Left of logo</option></select></label>
+            <div class="two-col">
+              <label>Gap <div class="unit-field"><input id="gap" type="number" min="0" max="400" step="2" value="28" /><span>px</span></div></label>
+              <label>Alignment<select id="alignment"><option value="center" selected>Center</option><option value="start">Start</option><option value="end">End</option></select></label>
+              <label>Offset X <div class="unit-field"><input id="offsetX" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label>
+              <label>Offset Y <div class="unit-field"><input id="offsetY" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label>
+            </div>
+          </section>
+
+          <section class="tab-panel" data-panel="logo">
+            <div class="section-heading"><h2>Logo</h2><span>Built-in SVGs</span></div>
+            <label>Logo variant<select id="logoType"><option value="wordmark" selected>Wordmark</option><option value="combination">Combination</option><option value="stacked">Stacked</option><option value="lettermark">Lettermark</option><option value="custom">Custom upload</option></select></label>
+            <label>Custom SVG / image <input id="logoFile" type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp,.svg" /></label>
+            <div class="two-col">
+              <label>Logo width <div class="unit-field"><input id="logoSize" type="number" min="20" max="1400" step="5" value="220" /><span>px</span></div></label>
+              <label>Logo color <input id="logoColor" type="color" value="#ffffff" /></label>
+            </div>
+            <p class="hint">Built-in SVGs preserve their aspect ratio and can be recolored. Uploading switches to Custom.</p>
+          </section>
+
+          <section class="tab-panel" data-panel="motion">
+            <div class="section-heading"><h2>Motion</h2><span>Enter → Hold → Exit</span></div>
+            <label>Lifecycle<select id="flowMode"><option value="in-out" selected>In → Hold → Out</option><option value="in-stay">In → Stay</option><option value="out">Out only</option></select></label>
+            <div class="three-col">
+              <label>Enter <div class="unit-field"><input id="enterDuration" type="number" min="50" max="5000" step="25" value="850" /><span>ms</span></div></label>
+              <label>Hold <div class="unit-field"><input id="holdDuration" type="number" min="0" max="10000" step="50" value="1400" /><span>ms</span></div></label>
+              <label>Exit <div class="unit-field"><input id="exitDuration" type="number" min="50" max="5000" step="25" value="750" /><span>ms</span></div></label>
+            </div>
+            <div class="two-col">
+              <label>Enter direction<select id="enterDirection"><option value="from-bottom" selected>From bottom</option><option value="from-top">From top</option></select></label>
+              <label>Exit direction<select id="exitDirection"><option value="to-top" selected>To top</option><option value="to-bottom">To bottom</option></select></label>
+              <label>Logo travel <div class="unit-field"><input id="logoTravel" type="number" min="0" max="800" step="5" value="50" /><span>px</span></div></label>
+              <label>Text travel <div class="unit-field"><input id="textTravel" type="number" min="0" max="800" step="5" value="50" /><span>px</span></div></label>
+              <label>Logo start scale <input id="logoScale" type="number" min="0" max="3" step="0.05" value="0.94" /></label>
+              <label>Text start scale <input id="textScale" type="number" min="0" max="3" step="0.05" value="0.96" /></label>
+            </div>
+            <label>Word stagger <input id="wordStagger" type="range" min="0" max="200" step="5" value="65" /><output id="wordStaggerOut">65 ms</output></label>
+
+            <div class="curve-card">
+              <div class="group-title-row">
+                <label>Curve<select id="curveTarget"><option value="enter" selected>Entrance</option><option value="exit">Exit</option></select></label>
+                <label>Preset<select id="preset"><option value="custom">Custom</option><option value="0.05,0.9,0.1,1" selected>Snappy decel</option><option value="0.16,1,0.3,1">Expo out</option><option value="0.25,1,0.5,1">Quart out</option><option value="0.7,0,0.84,0">Momentum launch</option><option value="0.85,0,0.95,0.15">Steep launch</option></select></label>
+              </div>
+              <svg id="curveViz" viewBox="0 0 260 170" role="img" aria-label="Cubic Bézier curve editor">
+                <path class="curve-grid" d="M20 20H240M20 63.3H240M20 106.6H240M20 150H240M20 20V150M93.3 20V150M166.6 20V150M240 20V150" />
+                <path class="grid-line" d="M20 150H240M20 20V150" />
+                <path class="guide" id="guide1" /><path class="guide" id="guide2" />
+                <path class="curve" id="curvePath" />
+                <circle class="curve-endpoint" cx="20" cy="150" r="3"/><circle class="curve-endpoint" cx="240" cy="63" r="3"/>
+                <circle class="handle" id="handle1" r="6" tabindex="0" /><circle class="handle" id="handle2" r="6" tabindex="0" />
+              </svg>
+              <div class="four-col">
+                <label>x1 <input id="x1" type="number" min="0" max="1" step="0.01" value="0.05" /></label><label>y1 <input id="y1" type="number" min="-2" max="3" step="0.01" value="0.9" /></label><label>x2 <input id="x2" type="number" min="0" max="1" step="0.01" value="0.1" /></label><label>y2 <input id="y2" type="number" min="-2" max="3" step="0.01" value="1" /></label>
+              </div>
+            </div>
+          </section>
+
+          <section class="tab-panel" data-panel="canvas">
+            <div class="section-heading"><h2>Canvas</h2><span>Exact output size</span></div>
+            <label>Preset<select id="canvasPreset"><option value="custom" selected>Current / custom (800×450)</option><option value="1:1">1:1 Square (1080×1080)</option><option value="16:9">16:9 Landscape (1920×1080)</option><option value="9:16">9:16 Story / Reel (1080×1920)</option><option value="4:3">4:3 Standard (1200×900)</option><option value="banner">Wide Banner (1200×400)</option><option value="compact">Compact UI (600×300)</option></select></label>
+            <div class="two-col">
+              <label>Width <div class="unit-field"><input id="canvasWidth" type="number" min="120" max="4096" step="1" value="800" /><span>px</span></div></label>
+              <label>Height <div class="unit-field"><input id="canvasHeight" type="number" min="120" max="4096" step="1" value="450" /><span>px</span></div></label>
+              <label>Background <input id="bgColor" type="color" value="#103e36" /></label>
+              <label>Safe X <div class="unit-field"><input id="marginX" type="number" min="0" max="1200" step="5" value="60" /><span>px</span></div></label>
+              <label>Safe Y <div class="unit-field"><input id="marginY" type="number" min="0" max="1200" step="5" value="40" /><span>px</span></div></label>
+            </div>
+            <label class="check-row"><input id="showMargins" type="checkbox" checked /> Show safe-area guides</label>
+            <label class="check-row"><input id="showGrid" type="checkbox" /> Show grid</label>
+          </section>
+
+          <section class="tab-panel" data-panel="export">
+            <div class="section-heading"><h2>Export</h2><span>Same renderer as preview</span></div>
+            <div class="two-col">
+              <label>GIF FPS <input id="fps" type="number" min="8" max="60" step="1" value="30" /></label>
+              <label>Resolution<select id="exportScale"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label>
+            </div>
+            <div class="export-summary"><span>Estimated frames</span><strong id="frameEstimate">90</strong></div>
+            <button id="exportBtn" type="button" class="primary-button full-width">Export animated GIF</button>
+            <button id="pngBtn" type="button" class="secondary full-width">Download current frame PNG</button>
+            <progress id="exportProgress" max="1" value="0"></progress>
+            <p id="status" role="status" aria-live="polite">Ready.</p>
+            <p class="hint">GIF export uses the same deterministic Canvas renderer as preview.</p>
+          </section>
         </div>
-        <button id="resetBtn" type="button" class="icon-button secondary" title="Reset defaults">Reset</button>
-      </header>
-
-      <nav class="tabs" aria-label="Editor controls">
-        <button type="button" class="tab active" data-tab="typography">Type</button>
-        <button type="button" class="tab" data-tab="lockup">Lockup</button>
-        <button type="button" class="tab" data-tab="logo">Logo</button>
-        <button type="button" class="tab" data-tab="motion">Motion</button>
-        <button type="button" class="tab" data-tab="canvas">Canvas</button>
-        <button type="button" class="tab" data-tab="export">Export</button>
-      </nav>
-
-      <div class="tab-panels">
-        <section class="tab-panel active" data-panel="typography">
-          <div class="section-heading"><h2>Typography</h2><span>Default: Google Anton</span></div>
-          <label>Claim <input id="headline" type="text" value="MORGEN MACHT MAN HEUTE." /></label>
-          <label>Google Font
-            <div class="inline-control">
-              <input id="fontFamily" type="text" value="Anton" placeholder="Anton, Oswald, Roboto Condensed…" />
-              <button id="loadFontBtn" type="button" class="secondary compact">Load</button>
-            </div>
-          </label>
-          <p class="hint" id="fontStatus">Anton loaded from Google Fonts.</p>
-          <label class="check-row"><input id="autoFit" type="checkbox" checked /> Fit claim to canvas margins</label>
-          <div class="two-col">
-            <label>Font size <input id="fontSize" type="number" min="10" max="400" step="1" value="52" /></label>
-            <label>Weight <input id="fontWeight" type="number" min="100" max="900" step="100" value="400" /></label>
-            <label>Letter spacing <input id="letterSpacing" type="number" min="-10" max="40" step="0.5" value="2" /></label>
-            <label>Word spacing <input id="wordSpacing" type="number" min="-20" max="80" step="1" value="0" /></label>
-          </div>
-          <div class="two-col">
-            <label>Text casing
-              <select id="textTransform">
-                <option value="none">As typed</option>
-                <option value="uppercase" selected>UPPERCASE</option>
-                <option value="capitalize">Capitalize</option>
-                <option value="lowercase">lowercase</option>
-              </select>
-            </label>
-            <label>Text color <input id="textColor" type="color" value="#ffffff" /></label>
-          </div>
-        </section>
-
-        <section class="tab-panel" data-panel="lockup">
-          <div class="section-heading"><h2>Lockup</h2><span>Logo + text relationship</span></div>
-          <label>Text position relative to logo
-            <select id="position">
-              <option value="below" selected>Below</option>
-              <option value="above">Above</option>
-              <option value="right">Right</option>
-              <option value="left">Left</option>
-            </select>
-          </label>
-          <div class="two-col">
-            <label>Gap <input id="gap" type="number" min="0" max="400" step="2" value="28" /></label>
-            <label>Alignment
-              <select id="alignment"><option value="center" selected>Center</option><option value="start">Start</option><option value="end">End</option></select>
-            </label>
-            <label>Offset X <input id="offsetX" type="number" min="-1000" max="1000" step="2" value="0" /></label>
-            <label>Offset Y <input id="offsetY" type="number" min="-1000" max="1000" step="2" value="0" /></label>
-          </div>
-        </section>
-
-        <section class="tab-panel" data-panel="logo">
-          <div class="section-heading"><h2>Logo</h2><span>4 SVG variants from your AI Studio build</span></div>
-          <label>Built-in logo
-            <select id="logoType">
-              <option value="wordmark" selected>Wordmark</option>
-              <option value="combination">Combination</option>
-              <option value="stacked">Stacked</option>
-              <option value="lettermark">Lettermark</option>
-              <option value="custom">Custom upload</option>
-            </select>
-          </label>
-          <label>Custom SVG / image <input id="logoFile" type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp,.svg" /></label>
-          <p class="hint">Uploading switches to Custom. Built-in SVGs can be recolored.</p>
-          <div class="two-col">
-            <label>Logo width <input id="logoSize" type="number" min="20" max="1400" step="5" value="220" /></label>
-            <label>Logo color <input id="logoColor" type="color" value="#ffffff" /></label>
-          </div>
-        </section>
-
-        <section class="tab-panel" data-panel="motion">
-          <div class="section-heading"><h2>Motion</h2><span>Enter → Hold → Exit</span></div>
-          <label>Lifecycle
-            <select id="flowMode"><option value="in-out" selected>In → Hold → Out</option><option value="in-stay">In → Stay</option><option value="out">Out only</option></select>
-          </label>
-          <div class="three-col">
-            <label>Enter ms <input id="enterDuration" type="number" min="50" max="5000" step="25" value="850" /></label>
-            <label>Hold ms <input id="holdDuration" type="number" min="0" max="10000" step="50" value="1400" /></label>
-            <label>Exit ms <input id="exitDuration" type="number" min="50" max="5000" step="25" value="750" /></label>
-          </div>
-          <div class="two-col">
-            <label>Enter direction <select id="enterDirection"><option value="from-bottom" selected>From bottom</option><option value="from-top">From top</option></select></label>
-            <label>Exit direction <select id="exitDirection"><option value="to-top" selected>To top</option><option value="to-bottom">To bottom</option></select></label>
-            <label>Logo travel <input id="logoTravel" type="number" min="0" max="800" step="5" value="50" /></label>
-            <label>Text travel <input id="textTravel" type="number" min="0" max="800" step="5" value="50" /></label>
-            <label>Logo start scale <input id="logoScale" type="number" min="0" max="3" step="0.05" value="0.94" /></label>
-            <label>Text start scale <input id="textScale" type="number" min="0" max="3" step="0.05" value="0.96" /></label>
-          </div>
-          <label>Word stagger (ms) <input id="wordStagger" type="range" min="0" max="200" step="5" value="65" /><output id="wordStaggerOut">65 ms</output></label>
-
-          <div class="curve-card">
-            <div class="group-title-row">
-              <label>Curve
-                <select id="curveTarget"><option value="enter" selected>Entrance</option><option value="exit">Exit</option></select>
-              </label>
-              <label>Preset
-                <select id="preset">
-                  <option value="custom">Custom</option>
-                  <option value="0.05,0.9,0.1,1" selected>Snappy decel</option>
-                  <option value="0.16,1,0.3,1">Expo out</option>
-                  <option value="0.25,1,0.5,1">Quart out</option>
-                  <option value="0.7,0,0.84,0">Momentum launch</option>
-                  <option value="0.85,0,0.95,0.15">Steep launch</option>
-                </select>
-              </label>
-            </div>
-            <svg id="curveViz" viewBox="0 0 260 170" role="img" aria-label="Cubic bezier curve preview">
-              <path class="grid-line" d="M20 150H240M20 20V150" />
-              <path class="guide" id="guide1" /><path class="guide" id="guide2" />
-              <path class="curve" id="curvePath" />
-              <circle class="handle" id="handle1" r="5" /><circle class="handle" id="handle2" r="5" />
-            </svg>
-            <div class="four-col">
-              <label>x1 <input id="x1" type="number" min="0" max="1" step="0.01" value="0.05" /></label>
-              <label>y1 <input id="y1" type="number" min="-2" max="3" step="0.01" value="0.9" /></label>
-              <label>x2 <input id="x2" type="number" min="0" max="1" step="0.01" value="0.1" /></label>
-              <label>y2 <input id="y2" type="number" min="-2" max="3" step="0.01" value="1" /></label>
-            </div>
-          </div>
-        </section>
-
-        <section class="tab-panel" data-panel="canvas">
-          <div class="section-heading"><h2>Canvas</h2><span>Exact export dimensions</span></div>
-          <label>Preset
-            <select id="canvasPreset">
-              <option value="custom" selected>Current / custom (800×450)</option>
-              <option value="1:1">1:1 Square (1080×1080)</option>
-              <option value="16:9">16:9 Landscape (1920×1080)</option>
-              <option value="9:16">9:16 Story / Reel (1080×1920)</option>
-              <option value="4:3">4:3 Standard (1200×900)</option>
-              <option value="banner">Wide Banner (1200×400)</option>
-              <option value="compact">Compact UI (600×300)</option>
-            </select>
-          </label>
-          <div class="two-col">
-            <label>Width <input id="canvasWidth" type="number" min="120" max="4096" step="1" value="800" /></label>
-            <label>Height <input id="canvasHeight" type="number" min="120" max="4096" step="1" value="450" /></label>
-            <label>Background <input id="bgColor" type="color" value="#103e36" /></label>
-            <label>Horizontal margin <input id="marginX" type="number" min="0" max="1200" step="5" value="60" /></label>
-            <label>Vertical margin <input id="marginY" type="number" min="0" max="1200" step="5" value="40" /></label>
-          </div>
-          <label class="check-row"><input id="showMargins" type="checkbox" checked /> Show margin / safe guides</label>
-          <label class="check-row"><input id="showGrid" type="checkbox" /> Show grid</label>
-        </section>
-
-        <section class="tab-panel" data-panel="export">
-          <div class="section-heading"><h2>Export</h2><span>Same renderer as preview</span></div>
-          <div class="two-col">
-            <label>GIF FPS <input id="fps" type="number" min="8" max="60" step="1" value="30" /></label>
-            <label>Resolution scale
-              <select id="exportScale"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select>
-            </label>
-          </div>
-          <button id="exportBtn" type="button">Export animated GIF</button>
-          <button id="pngBtn" type="button" class="secondary">Download current frame PNG</button>
-          <progress id="exportProgress" max="1" value="0"></progress>
-          <p id="status" role="status" aria-live="polite">Ready.</p>
-          <p class="hint">GIF export uses a solid canvas. PNG preserves the current canvas exactly.</p>
-        </section>
-      </div>
-    </aside>
+      </aside>
+    </section>
   </main>
 
   <script type="module" src="./app.js"></script>
+  <script type="module" src="./premium-ui.js"></script>
 </body>
 </html>
