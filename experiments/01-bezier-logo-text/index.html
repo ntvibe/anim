@@ -3,28 +3,44 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Bezier logo + text — anim</title>
+  <title>Logo + typography animation studio — anim</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link id="googleFontStylesheet" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&display=swap" />
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
   <main class="app">
-    <section class="stage-panel">
-      <div class="stage-wrap">
+    <section class="workspace">
+      <div class="stage-toolbar">
+        <div>
+          <strong>Preview</strong>
+          <span id="canvasReadout">800 × 450</span>
+        </div>
+        <button id="restartBtn" type="button" class="secondary">Restart</button>
+      </div>
+
+      <div class="stage-shell">
         <canvas id="stage" width="800" height="450" aria-label="Animation preview"></canvas>
       </div>
 
       <div class="transport">
         <button id="playBtn" type="button">Play</button>
-        <button id="restartBtn" type="button" class="secondary">Restart</button>
-        <input id="scrubber" type="range" min="0" max="1" step="0.001" value="0" aria-label="Timeline" />
+        <input id="scrubber" type="range" min="0" max="1" step="0.001" value="0" aria-label="Animation playhead" />
         <output id="timeReadout">0.00 s</output>
       </div>
 
       <section class="timeline-panel" aria-label="Layer timeline">
         <div class="timeline-head">
-          <strong>Layer timeline</strong>
-          <span>Drag a bar or its handles. Values are percentages of total duration.</span>
+          <div>
+            <strong>Layer timeline</strong>
+            <span>Drag bars or their handles. Colored segments show Enter / Hold / Exit.</span>
+          </div>
+          <div class="phase-legend" aria-label="Timeline phase legend">
+            <span><i class="enter"></i>Enter</span>
+            <span><i class="hold"></i>Hold</span>
+            <span><i class="exit"></i>Exit</span>
+          </div>
         </div>
         <div class="timeline-ruler" aria-hidden="true">
           <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
@@ -33,31 +49,37 @@
           <div class="timeline-playhead" aria-hidden="true"></div>
 
           <div class="timeline-row" data-layer="logo">
-            <div class="timeline-label"><strong>Logo</strong><span id="logoTimingLabel">0–65%</span></div>
+            <div class="timeline-label"><strong>Logo</strong><span id="logoTimingLabel">0–100%</span></div>
             <div class="timing-track" data-track="logo" tabindex="0" aria-label="Logo animation range">
               <div class="timing-bar" data-bar="logo">
                 <button class="timing-handle start" type="button" data-handle="logo-start" aria-label="Logo start time"></button>
+                <div class="phase-strip" aria-hidden="true">
+                  <span class="phase enter"></span><span class="phase hold"></span><span class="phase exit"></span>
+                </div>
                 <span class="timing-bar-body">Logo</span>
                 <button class="timing-handle end" type="button" data-handle="logo-end" aria-label="Logo end time"></button>
               </div>
             </div>
             <div class="timing-inputs">
               <label>Start % <input id="logoStart" type="number" min="0" max="99" step="1" value="0" /></label>
-              <label>End % <input id="logoEnd" type="number" min="1" max="100" step="1" value="65" /></label>
+              <label>End % <input id="logoEnd" type="number" min="1" max="100" step="1" value="100" /></label>
             </div>
           </div>
 
           <div class="timeline-row" data-layer="text">
-            <div class="timeline-label"><strong>Text</strong><span id="textTimingLabel">14–100%</span></div>
+            <div class="timeline-label"><strong>Text</strong><span id="textTimingLabel">8–100%</span></div>
             <div class="timing-track" data-track="text" tabindex="0" aria-label="Text animation range">
               <div class="timing-bar" data-bar="text">
                 <button class="timing-handle start" type="button" data-handle="text-start" aria-label="Text start time"></button>
+                <div class="phase-strip" aria-hidden="true">
+                  <span class="phase enter"></span><span class="phase hold"></span><span class="phase exit"></span>
+                </div>
                 <span class="timing-bar-body">Text</span>
                 <button class="timing-handle end" type="button" data-handle="text-end" aria-label="Text end time"></button>
               </div>
             </div>
             <div class="timing-inputs">
-              <label>Start % <input id="textStart" type="number" min="0" max="99" step="1" value="14" /></label>
+              <label>Start % <input id="textStart" type="number" min="0" max="99" step="1" value="8" /></label>
               <label>End % <input id="textEnd" type="number" min="1" max="100" step="1" value="100" /></label>
             </div>
           </div>
@@ -66,86 +88,183 @@
     </section>
 
     <aside class="controls">
-      <header>
-        <h1>Bézier logo + text</h1>
-        <p>One easing curve drives layer recipes. Preview and GIF export use the same Canvas renderer.</p>
+      <header class="controls-header">
+        <div>
+          <h1>Animation Studio</h1>
+          <p>Fast logo + claim motion without opening After Effects.</p>
+        </div>
+        <button id="resetBtn" type="button" class="icon-button secondary" title="Reset defaults">Reset</button>
       </header>
 
-      <section class="control-group">
-        <h2>Content</h2>
-        <label>Headline <input id="headline" type="text" value="MAKE IT MOVE" /></label>
-        <label>Google Font
-          <div class="inline-control">
-            <input id="fontFamily" type="text" value="Anton" placeholder="e.g. Anton, Roboto Condensed" />
-            <button id="loadFontBtn" type="button" class="secondary compact">Load</button>
+      <nav class="tabs" aria-label="Editor controls">
+        <button type="button" class="tab active" data-tab="typography">Type</button>
+        <button type="button" class="tab" data-tab="lockup">Lockup</button>
+        <button type="button" class="tab" data-tab="logo">Logo</button>
+        <button type="button" class="tab" data-tab="motion">Motion</button>
+        <button type="button" class="tab" data-tab="canvas">Canvas</button>
+        <button type="button" class="tab" data-tab="export">Export</button>
+      </nav>
+
+      <div class="tab-panels">
+        <section class="tab-panel active" data-panel="typography">
+          <div class="section-heading"><h2>Typography</h2><span>Default: Google Anton</span></div>
+          <label>Claim <input id="headline" type="text" value="MORGEN MACHT MAN HEUTE." /></label>
+          <label>Google Font
+            <div class="inline-control">
+              <input id="fontFamily" type="text" value="Anton" placeholder="Anton, Oswald, Roboto Condensed…" />
+              <button id="loadFontBtn" type="button" class="secondary compact">Load</button>
+            </div>
+          </label>
+          <p class="hint" id="fontStatus">Anton loaded from Google Fonts.</p>
+          <label class="check-row"><input id="autoFit" type="checkbox" checked /> Fit claim to canvas margins</label>
+          <div class="two-col">
+            <label>Font size <input id="fontSize" type="number" min="10" max="400" step="1" value="52" /></label>
+            <label>Weight <input id="fontWeight" type="number" min="100" max="900" step="100" value="400" /></label>
+            <label>Letter spacing <input id="letterSpacing" type="number" min="-10" max="40" step="0.5" value="2" /></label>
+            <label>Word spacing <input id="wordSpacing" type="number" min="-20" max="80" step="1" value="0" /></label>
           </div>
-        </label>
-        <p class="hint" id="fontStatus">Anton loaded from Google Fonts.</p>
-        <label>Logo image / SVG <input id="logoFile" type="file" accept="image/*,.svg,image/svg+xml" /></label>
-      </section>
+          <div class="two-col">
+            <label>Text casing
+              <select id="textTransform">
+                <option value="none">As typed</option>
+                <option value="uppercase" selected>UPPERCASE</option>
+                <option value="capitalize">Capitalize</option>
+                <option value="lowercase">lowercase</option>
+              </select>
+            </label>
+            <label>Text color <input id="textColor" type="color" value="#ffffff" /></label>
+          </div>
+        </section>
 
-      <section class="control-group">
-        <h2>Canvas</h2>
-        <div class="two-col">
-          <label>Background <input id="bgColor" type="color" value="#f1f1ee" /></label>
-          <label>Logo width (px) <input id="logoSize" type="number" min="20" max="700" step="5" value="190" /></label>
-          <label>Horizontal margin <input id="marginX" type="number" min="0" max="350" step="5" value="60" /></label>
-          <label>Vertical margin <input id="marginY" type="number" min="0" max="200" step="5" value="40" /></label>
-        </div>
-        <label class="check-row"><input id="showMargins" type="checkbox" checked /> Show margin guides</label>
-      </section>
+        <section class="tab-panel" data-panel="lockup">
+          <div class="section-heading"><h2>Lockup</h2><span>Logo + text relationship</span></div>
+          <label>Text position relative to logo
+            <select id="position">
+              <option value="below" selected>Below</option>
+              <option value="above">Above</option>
+              <option value="right">Right</option>
+              <option value="left">Left</option>
+            </select>
+          </label>
+          <div class="two-col">
+            <label>Gap <input id="gap" type="number" min="0" max="400" step="2" value="28" /></label>
+            <label>Alignment
+              <select id="alignment"><option value="center" selected>Center</option><option value="start">Start</option><option value="end">End</option></select>
+            </label>
+            <label>Offset X <input id="offsetX" type="number" min="-1000" max="1000" step="2" value="0" /></label>
+            <label>Offset Y <input id="offsetY" type="number" min="-1000" max="1000" step="2" value="0" /></label>
+          </div>
+        </section>
 
-      <section class="control-group">
-        <h2>Timing</h2>
-        <div class="two-col">
-          <label>Duration (ms) <input id="duration" type="number" min="100" max="10000" step="50" value="1400" /></label>
-          <label>FPS <input id="fps" type="number" min="8" max="60" step="1" value="30" /></label>
-        </div>
-      </section>
+        <section class="tab-panel" data-panel="logo">
+          <div class="section-heading"><h2>Logo</h2><span>4 SVG variants from your AI Studio build</span></div>
+          <label>Built-in logo
+            <select id="logoType">
+              <option value="wordmark" selected>Wordmark</option>
+              <option value="combination">Combination</option>
+              <option value="stacked">Stacked</option>
+              <option value="lettermark">Lettermark</option>
+              <option value="custom">Custom upload</option>
+            </select>
+          </label>
+          <label>Custom SVG / image <input id="logoFile" type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp,.svg" /></label>
+          <p class="hint">Uploading switches to Custom. Built-in SVGs can be recolored.</p>
+          <div class="two-col">
+            <label>Logo width <input id="logoSize" type="number" min="20" max="1400" step="5" value="220" /></label>
+            <label>Logo color <input id="logoColor" type="color" value="#ffffff" /></label>
+          </div>
+        </section>
 
-      <section class="control-group">
-        <div class="group-title-row">
-          <h2>Cubic Bézier</h2>
-          <select id="preset" aria-label="Bezier preset">
-            <option value="custom">Custom</option>
-            <option value="0.22,1,0.36,1" selected>Fast out</option>
-            <option value="0.16,1,0.3,1">Expo out</option>
-            <option value="0.34,1.56,0.64,1">Back-ish</option>
-            <option value="0.65,0,0.35,1">Smooth</option>
-          </select>
-        </div>
-        <svg id="curveViz" viewBox="0 0 260 170" role="img" aria-label="Cubic bezier curve preview">
-          <path class="grid-line" d="M20 150H240M20 20V150" />
-          <path class="guide" id="guide1" />
-          <path class="guide" id="guide2" />
-          <path class="curve" id="curvePath" />
-          <circle class="handle" id="handle1" r="5" />
-          <circle class="handle" id="handle2" r="5" />
-        </svg>
-        <div class="four-col">
-          <label>x1 <input id="x1" type="number" min="0" max="1" step="0.01" value="0.22" /></label>
-          <label>y1 <input id="y1" type="number" min="-2" max="3" step="0.01" value="1" /></label>
-          <label>x2 <input id="x2" type="number" min="0" max="1" step="0.01" value="0.36" /></label>
-          <label>y2 <input id="y2" type="number" min="-2" max="3" step="0.01" value="1" /></label>
-        </div>
-      </section>
+        <section class="tab-panel" data-panel="motion">
+          <div class="section-heading"><h2>Motion</h2><span>Enter → Hold → Exit</span></div>
+          <label>Lifecycle
+            <select id="flowMode"><option value="in-out" selected>In → Hold → Out</option><option value="in-stay">In → Stay</option><option value="out">Out only</option></select>
+          </label>
+          <div class="three-col">
+            <label>Enter ms <input id="enterDuration" type="number" min="50" max="5000" step="25" value="850" /></label>
+            <label>Hold ms <input id="holdDuration" type="number" min="0" max="10000" step="50" value="1400" /></label>
+            <label>Exit ms <input id="exitDuration" type="number" min="50" max="5000" step="25" value="750" /></label>
+          </div>
+          <div class="two-col">
+            <label>Enter direction <select id="enterDirection"><option value="from-bottom" selected>From bottom</option><option value="from-top">From top</option></select></label>
+            <label>Exit direction <select id="exitDirection"><option value="to-top" selected>To top</option><option value="to-bottom">To bottom</option></select></label>
+            <label>Logo travel <input id="logoTravel" type="number" min="0" max="800" step="5" value="50" /></label>
+            <label>Text travel <input id="textTravel" type="number" min="0" max="800" step="5" value="50" /></label>
+            <label>Logo start scale <input id="logoScale" type="number" min="0" max="3" step="0.05" value="0.94" /></label>
+            <label>Text start scale <input id="textScale" type="number" min="0" max="3" step="0.05" value="0.96" /></label>
+          </div>
+          <label>Word stagger (ms) <input id="wordStagger" type="range" min="0" max="200" step="5" value="65" /><output id="wordStaggerOut">65 ms</output></label>
 
-      <section class="control-group">
-        <h2>Motion recipe</h2>
-        <div class="two-col">
-          <label>Logo Y (px) <input id="logoY" type="number" min="-400" max="400" value="70" /></label>
-          <label>Logo start scale <input id="logoScale" type="number" min="0" max="3" step="0.05" value="0.82" /></label>
-          <label>Text Y (px) <input id="textY" type="number" min="-400" max="400" value="55" /></label>
-          <label>Text start scale <input id="textScale" type="number" min="0" max="3" step="0.05" value="0.94" /></label>
-        </div>
-      </section>
+          <div class="curve-card">
+            <div class="group-title-row">
+              <label>Curve
+                <select id="curveTarget"><option value="enter" selected>Entrance</option><option value="exit">Exit</option></select>
+              </label>
+              <label>Preset
+                <select id="preset">
+                  <option value="custom">Custom</option>
+                  <option value="0.05,0.9,0.1,1" selected>Snappy decel</option>
+                  <option value="0.16,1,0.3,1">Expo out</option>
+                  <option value="0.25,1,0.5,1">Quart out</option>
+                  <option value="0.7,0,0.84,0">Momentum launch</option>
+                  <option value="0.85,0,0.95,0.15">Steep launch</option>
+                </select>
+              </label>
+            </div>
+            <svg id="curveViz" viewBox="0 0 260 170" role="img" aria-label="Cubic bezier curve preview">
+              <path class="grid-line" d="M20 150H240M20 20V150" />
+              <path class="guide" id="guide1" /><path class="guide" id="guide2" />
+              <path class="curve" id="curvePath" />
+              <circle class="handle" id="handle1" r="5" /><circle class="handle" id="handle2" r="5" />
+            </svg>
+            <div class="four-col">
+              <label>x1 <input id="x1" type="number" min="0" max="1" step="0.01" value="0.05" /></label>
+              <label>y1 <input id="y1" type="number" min="-2" max="3" step="0.01" value="0.9" /></label>
+              <label>x2 <input id="x2" type="number" min="0" max="1" step="0.01" value="0.1" /></label>
+              <label>y2 <input id="y2" type="number" min="-2" max="3" step="0.01" value="1" /></label>
+            </div>
+          </div>
+        </section>
 
-      <section class="control-group export-group">
-        <h2>Export</h2>
-        <button id="exportBtn" type="button">Export GIF</button>
-        <progress id="exportProgress" max="1" value="0"></progress>
-        <p id="status" role="status" aria-live="polite">Ready.</p>
-      </section>
+        <section class="tab-panel" data-panel="canvas">
+          <div class="section-heading"><h2>Canvas</h2><span>Exact export dimensions</span></div>
+          <label>Preset
+            <select id="canvasPreset">
+              <option value="custom" selected>Current / custom (800×450)</option>
+              <option value="1:1">1:1 Square (1080×1080)</option>
+              <option value="16:9">16:9 Landscape (1920×1080)</option>
+              <option value="9:16">9:16 Story / Reel (1080×1920)</option>
+              <option value="4:3">4:3 Standard (1200×900)</option>
+              <option value="banner">Wide Banner (1200×400)</option>
+              <option value="compact">Compact UI (600×300)</option>
+            </select>
+          </label>
+          <div class="two-col">
+            <label>Width <input id="canvasWidth" type="number" min="120" max="4096" step="1" value="800" /></label>
+            <label>Height <input id="canvasHeight" type="number" min="120" max="4096" step="1" value="450" /></label>
+            <label>Background <input id="bgColor" type="color" value="#103e36" /></label>
+            <label>Horizontal margin <input id="marginX" type="number" min="0" max="1200" step="5" value="60" /></label>
+            <label>Vertical margin <input id="marginY" type="number" min="0" max="1200" step="5" value="40" /></label>
+          </div>
+          <label class="check-row"><input id="showMargins" type="checkbox" checked /> Show margin / safe guides</label>
+          <label class="check-row"><input id="showGrid" type="checkbox" /> Show grid</label>
+        </section>
+
+        <section class="tab-panel" data-panel="export">
+          <div class="section-heading"><h2>Export</h2><span>Same renderer as preview</span></div>
+          <div class="two-col">
+            <label>GIF FPS <input id="fps" type="number" min="8" max="60" step="1" value="30" /></label>
+            <label>Resolution scale
+              <select id="exportScale"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select>
+            </label>
+          </div>
+          <button id="exportBtn" type="button">Export animated GIF</button>
+          <button id="pngBtn" type="button" class="secondary">Download current frame PNG</button>
+          <progress id="exportProgress" max="1" value="0"></progress>
+          <p id="status" role="status" aria-live="polite">Ready.</p>
+          <p class="hint">GIF export uses a solid canvas. PNG preserves the current canvas exactly.</p>
+        </section>
+      </div>
     </aside>
   </main>
 
