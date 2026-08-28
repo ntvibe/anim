@@ -37,12 +37,13 @@ const ui = {
   fps: $('fps'), timeline: $('timeline'), curveTarget: $('curveTarget'), preset: $('preset'),
   x1: $('x1'), y1: $('y1'), x2: $('x2'), y2: $('y2'), loadFontBtn: $('loadFontBtn'),
   downloadSetupBtn: $('downloadSetupBtn'), loadSetupBtn: $('loadSetupBtn'), setupFile: $('setupFile'),
-  resetBtn: $('resetBtn'),
+  resetBtn: $('resetBtn'), undoBtn: $('undoBtn'), redoBtn: $('redoBtn'),
 };
 
 let snapEnabled = true;
 let isRestoring = false;
 let saveTimer = null;
+let timelineEditPending = false;
 let curveCache = {
   enter: [...CURVE_DEFAULTS.enter],
   exit: [...CURVE_DEFAULTS.exit],
@@ -90,8 +91,7 @@ function setSaveStatus(text, state = 'saved') {
   if (!ui.saveStatus) return;
   ui.saveStatus.classList.toggle('saving', state === 'saving');
   ui.saveStatus.classList.toggle('error', state === 'error');
-  const dot = '<i></i>';
-  ui.saveStatus.innerHTML = `${dot}${text}`;
+  ui.saveStatus.innerHTML = `<i></i>${text}`;
 }
 
 function saveNow() {
@@ -288,7 +288,15 @@ function setupInteractions() {
     if (['curveTarget', 'preset', 'x1', 'y1', 'x2', 'y2'].includes(event.target?.id)) updateCurveCache();
   });
 
-  ui.timeline?.addEventListener('pointerup', () => requestAnimationFrame(snapTimelineValues));
+  ui.timeline?.addEventListener('pointerdown', (event) => {
+    timelineEditPending = Boolean(event.target.closest('.timing-bar, .timing-handle, .phase-handle'));
+  });
+  ui.timeline?.addEventListener('pointerup', () => {
+    if (!timelineEditPending) return;
+    timelineEditPending = false;
+    requestAnimationFrame(snapTimelineValues);
+  });
+  ui.timeline?.addEventListener('pointercancel', () => { timelineEditPending = false; });
 
   ui.downloadSetupBtn?.addEventListener('click', downloadSetup);
   ui.loadSetupBtn?.addEventListener('click', () => ui.setupFile?.click());
@@ -302,9 +310,15 @@ function setupInteractions() {
       saveNow();
     }, 50);
   });
+  ui.undoBtn?.addEventListener('click', () => setTimeout(saveNow, 50));
+  ui.redoBtn?.addEventListener('click', () => setTimeout(saveNow, 50));
 
   window.addEventListener('keydown', (event) => {
     const editable = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') {
+      setTimeout(saveNow, 60);
+      return;
+    }
     if (editable || event.metaKey || event.ctrlKey || event.altKey) return;
     if (event.key.toLowerCase() === 'l') {
       event.preventDefault();
