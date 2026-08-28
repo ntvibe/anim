@@ -15,7 +15,7 @@
       <div class="topbar-brand">
         <div class="product-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 18 10.8 5.5 14 11l-4 7H4Zm7.4 0 3.8-6.6L20 18h-8.6Z"/></svg></div>
         <div class="brand-copy">
-          <strong>Animation Studio</strong><span class="project-divider"></span><span class="project-name">Fast Logo — Calm Motion</span><span class="version-badge">v2</span>
+          <strong>Animation Studio</strong><span class="project-divider"></span><span class="project-name">Fast Logo — Calm Motion</span><span class="version-badge">v3</span><span class="save-status" id="saveStatus"><i></i>Autosaved</span>
         </div>
       </div>
       <div class="topbar-center" aria-label="History">
@@ -61,11 +61,18 @@
           <select id="playbackRate" class="speed-select" aria-label="Playback speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select>
           <div class="time-cluster"><output id="timeReadout">0.00 s</output><span>/</span><output id="totalTimeReadout">1.95 s</output></div>
           <input id="scrubber" type="range" min="0" max="1" step="0.001" value="0" aria-label="Animation playhead" />
-          <label class="transport-toggle" title="Loop preview"><input id="previewLoop" type="checkbox" /> Loop</label>
+          <input id="previewLoop" type="checkbox" checked hidden />
+          <button id="loopBtn" type="button" class="transport-icon loop-button active" aria-pressed="true" title="Loop playback (L)" aria-label="Loop playback"><svg viewBox="0 0 24 24"><path d="M17.6 6H8.4l2.3-2.3-1.4-1.4L4.6 7l4.7 4.7 1.4-1.4L8.4 8h9.2A2.4 2.4 0 0 1 20 10.4V11h2v-.6A4.4 4.4 0 0 0 17.6 6ZM6.4 18h9.2l-2.3 2.3 1.4 1.4 4.7-4.7-4.7-4.7-1.4 1.4 2.3 2.3H6.4A2.4 2.4 0 0 1 4 13.6V13H2v.6A4.4 4.4 0 0 0 6.4 18Z"/></svg></button>
         </div>
 
         <section class="timeline-panel" aria-label="Layer timeline">
-          <div class="timeline-head"><div class="timeline-title-row"><strong>Timeline</strong><span id="timelineStatus">1.95 s</span></div><div class="phase-legend"><span><i class="enter"></i>Enter</span><span><i class="hold"></i>Hold</span><span><i class="exit"></i>Exit</span></div></div>
+          <div class="timeline-head">
+            <div class="timeline-title-row"><strong>Timeline</strong><span id="timelineStatus">1.95 s</span></div>
+            <div class="timeline-head-actions">
+              <button id="snapBtn" type="button" class="micro-toggle active" aria-pressed="true" title="Snap timing to frames (S)"><svg viewBox="0 0 24 24"><path d="M7 3h3v7H7a4 4 0 0 1 0-8v1Zm7 0h3v-1a4 4 0 0 1 0 8h-3V3Zm-7 9h3v9H7a6 6 0 0 1 0-12v3Zm7 0h3V9a6 6 0 0 1 0 12h-3v-9Z"/></svg><span>Snap</span></button>
+              <div class="phase-legend"><span><i class="enter"></i>Enter</span><span><i class="hold"></i>Hold</span><span><i class="exit"></i>Exit</span></div>
+            </div>
+          </div>
           <div class="timeline-grid">
             <div class="layer-column-head">Layers</div>
             <div class="timeline-ruler" id="timelineRuler" aria-label="Timeline ruler"></div>
@@ -149,6 +156,12 @@
 
           <section class="tab-panel" data-panel="motion">
             <div class="section-heading"><h2>Motion</h2><span>Deterministic lifecycle</span></div>
+            <div class="smart-presets" aria-label="Quick motion presets">
+              <button type="button" data-motion-preset="smooth"><strong>Smooth</strong><span>Soft brand reveal</span></button>
+              <button type="button" data-motion-preset="snappy"><strong>Snappy</strong><span>Fast UI motion</span></button>
+              <button type="button" data-motion-preset="soft"><strong>Soft</strong><span>Slow premium ease</span></button>
+              <button type="button" data-motion-preset="pop"><strong>Pop</strong><span>Playful overshoot</span></button>
+            </div>
             <label>Lifecycle<select id="flowMode"><option value="in-hold-out" selected>In → Hold → Out</option><option value="in-only">In only</option><option value="out-only">Out only</option><option value="in-out">In → Out</option><option value="in-stay">In → Stay</option><option value="static">Static</option></select></label>
             <div class="three-col"><label>Enter <div class="unit-field"><input id="enterDuration" type="number" min="50" max="5000" step="25" value="850" /><span>ms</span></div></label><label>Hold <div class="unit-field"><input id="holdDuration" type="number" min="0" max="10000" step="50" value="350" /><span>ms</span></div></label><label>Exit <div class="unit-field"><input id="exitDuration" type="number" min="50" max="5000" step="25" value="750" /><span>ms</span></div></label></div>
             <div class="two-col">
@@ -180,11 +193,18 @@
             <label class="check-row"><input id="gifLoop" type="checkbox" checked /> Loop exported GIF</label>
             <div class="export-summary"><span>Output</span><strong id="outputSizeReadout">800 × 450</strong></div><div class="export-summary"><span>Estimated frames</span><strong id="frameEstimate">59</strong></div>
             <button id="exportBtn" type="button" class="primary-button full-width">Export animated GIF</button><button id="pngBtn" type="button" class="secondary full-width">Download current frame PNG</button><progress id="exportProgress" max="1" value="0"></progress><p id="status" role="status" aria-live="polite">Ready.</p><p class="hint">GIF and PNG both use the exact same deterministic Canvas renderer as preview.</p>
+            <div class="settings-transfer">
+              <div class="section-heading compact-heading"><h2>Reusable setup</h2><span>JSON</span></div>
+              <p class="hint">Save this animation setup and load it later in another browser. Custom uploaded image files are not embedded.</p>
+              <div class="two-col"><button id="downloadSetupBtn" type="button" class="secondary">Download setup</button><button id="loadSetupBtn" type="button" class="secondary">Load setup</button></div>
+              <input id="setupFile" type="file" accept="application/json,.json" hidden />
+            </div>
           </section>
         </div>
       </aside>
     </section>
   </main>
   <script type="module" src="./app.js"></script>
+  <script type="module" src="./workflow-features.js"></script>
 </body>
 </html>
