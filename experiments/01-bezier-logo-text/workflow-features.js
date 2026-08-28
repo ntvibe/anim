@@ -34,7 +34,7 @@ const MOTION_PRESETS = {
 
 const ui = {
   loopBtn: $('loopBtn'), previewLoop: $('previewLoop'), snapBtn: $('snapBtn'), saveStatus: $('saveStatus'),
-  fps: $('fps'), timeline: $('timeline'), curveTarget: $('curveTarget'), preset: $('preset'),
+  fps: $('fps'), timeline: $('timeline'), curveTarget: $('curveTarget'), curveViz: $('curveViz'), preset: $('preset'),
   x1: $('x1'), y1: $('y1'), x2: $('x2'), y2: $('y2'), loadFontBtn: $('loadFontBtn'),
   downloadSetupBtn: $('downloadSetupBtn'), loadSetupBtn: $('loadSetupBtn'), setupFile: $('setupFile'),
   resetBtn: $('resetBtn'), undoBtn: $('undoBtn'), redoBtn: $('redoBtn'),
@@ -44,6 +44,7 @@ let snapEnabled = true;
 let isRestoring = false;
 let saveTimer = null;
 let timelineEditPending = false;
+let lastCurveTarget = ui.curveTarget?.value || 'enter';
 let curveCache = {
   enter: [...CURVE_DEFAULTS.enter],
   exit: [...CURVE_DEFAULTS.exit],
@@ -61,9 +62,12 @@ function editableControls() {
   });
 }
 
-function updateCurveCache() {
-  const target = ui.curveTarget?.value || 'enter';
-  const values = [ui.x1, ui.y1, ui.x2, ui.y2].map((el) => numeric(el?.value));
+function currentCurveValues() {
+  return [ui.x1, ui.y1, ui.x2, ui.y2].map((el) => numeric(el?.value));
+}
+
+function updateCurveCache(target = ui.curveTarget?.value || 'enter') {
+  const values = currentCurveValues();
   if (values.every(Number.isFinite)) curveCache[target] = values;
 }
 
@@ -130,6 +134,7 @@ function applyCurve(target, values) {
   });
   dispatch(ui.y2, 'change');
   curveCache[target] = values.map(Number);
+  lastCurveTarget = target;
 }
 
 function setLoop(enabled, { commit = true } = {}) {
@@ -169,6 +174,7 @@ function applySnapshot(snapshot) {
     applyCurve('enter', curveCache.enter);
     applyCurve('exit', curveCache.exit);
     setField('curveTarget', selectedCurve);
+    lastCurveTarget = selectedCurve;
 
     setLoop(snapshot.values.previewLoop !== false, { commit: true });
     setSnap(snapshot.snapEnabled !== false);
@@ -200,6 +206,7 @@ function applyMotionPreset(name) {
     applyCurve('enter', preset.enterBezier);
     applyCurve('exit', preset.exitBezier);
     setField('curveTarget', 'enter');
+    lastCurveTarget = 'enter';
     document.querySelectorAll('[data-motion-preset]').forEach((button) => button.classList.toggle('active', button.dataset.motionPreset === name));
   } finally {
     isRestoring = false;
@@ -285,7 +292,17 @@ function setupInteractions() {
     if (event.target?.id && event.target.matches('input,select')) scheduleSave();
   });
   document.addEventListener('change', (event) => {
-    if (['curveTarget', 'preset', 'x1', 'y1', 'x2', 'y2'].includes(event.target?.id)) updateCurveCache();
+    if (['preset', 'x1', 'y1', 'x2', 'y2'].includes(event.target?.id)) updateCurveCache();
+  });
+  document.addEventListener('change', (event) => {
+    if (event.target?.id !== 'curveTarget' || isRestoring) return;
+    updateCurveCache(lastCurveTarget);
+    lastCurveTarget = event.target.value;
+    setTimeout(() => updateCurveCache(lastCurveTarget), 0);
+  }, true);
+  ui.curveViz?.addEventListener('pointerup', () => {
+    updateCurveCache();
+    scheduleSave();
   });
 
   ui.timeline?.addEventListener('pointerdown', (event) => {
@@ -306,6 +323,8 @@ function setupInteractions() {
     setTimeout(() => {
       setLoop(true);
       setSnap(true);
+      curveCache = { enter: [...CURVE_DEFAULTS.enter], exit: [...CURVE_DEFAULTS.exit] };
+      lastCurveTarget = 'enter';
       document.querySelectorAll('[data-motion-preset]').forEach((button) => button.classList.remove('active'));
       saveNow();
     }, 50);
