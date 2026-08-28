@@ -10,201 +10,191 @@
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-  <main class="app-shell">
-    <header class="topbar">
-      <div class="topbar-brand">
-        <div class="product-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 18 10.8 5.5 14 11l-4 7H4Zm7.4 0 3.8-6.6L20 18h-8.6Z"/></svg></div>
-        <div class="brand-copy">
-          <strong>Animation Studio</strong><span class="project-divider"></span><span class="project-name">Fast Logo — Calm Motion</span><span class="version-badge">v3</span><span class="save-status" id="saveStatus"><i></i>Autosaved</span>
+  <main class="studio-shell">
+    <section class="workspace">
+      <div class="viewport-toolbar">
+        <div class="viewport-left">
+          <strong>Animation Studio</strong>
+          <span class="canvas-size" id="canvasReadout">800 × 450</span>
+          <span class="save-status" id="saveStatus"><i></i>Autosaved</span>
+        </div>
+        <div class="viewport-actions">
+          <button id="fitBtn" type="button" class="viewport-action active">Fit</button>
+          <select id="viewportZoom" aria-label="Viewport zoom"><option value="fit" selected>Fit</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100%</option><option value="1.5">150%</option></select>
+          <span class="toolbar-separator"></span>
+          <button id="viewportGridBtn" type="button" class="icon-button small" title="Toggle grid" aria-label="Toggle grid"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4V4Zm5 2H6v3h3V6Zm2 0v3h3V6h-3Zm5 0v3h2V6h-2ZM6 11v3h3v-3H6Zm5 0v3h3v-3h-3Zm5 0v3h2v-3h-2ZM6 16v2h3v-2H6Zm5 0v2h3v-2h-3Zm5 0v2h2v-2h-2Z"/></svg></button>
+          <button id="viewportSafeBtn" type="button" class="icon-button small active" title="Toggle safe guides" aria-label="Toggle safe guides"><svg viewBox="0 0 24 24"><path d="M5 3h4v2H7v2H5V3Zm10 0h4v4h-2V5h-2V3ZM5 17h2v2h2v2H5v-4Zm12 0h2v4h-4v-2h2v-2ZM8 8h8v8H8V8Zm2 2v4h4v-4h-4Z"/></svg></button>
         </div>
       </div>
-      <div class="topbar-center" aria-label="History">
-        <button id="undoBtn" type="button" class="toolbar-icon" title="Undo (Ctrl/Cmd+Z)" aria-label="Undo" disabled><svg viewBox="0 0 24 24"><path d="M9 7 4 12l5 5v-3h5a5 5 0 0 1 5 5h2a7 7 0 0 0-7-7H9V7Z"/></svg></button>
-        <button id="redoBtn" type="button" class="toolbar-icon" title="Redo (Ctrl/Cmd+Shift+Z)" aria-label="Redo" disabled><svg viewBox="0 0 24 24"><path d="m15 7 5 5-5 5v-3h-5a5 5 0 0 0-5 5H3a7 7 0 0 1 7-7h5V7Z"/></svg></button>
-      </div>
-      <div class="topbar-actions"><button id="resetBtn" type="button" class="ghost-button">Reset</button><button id="topExportBtn" type="button" class="primary-button">Export</button></div>
-    </header>
 
-    <nav class="left-rail" aria-label="Application navigation">
-      <div class="rail-main">
-        <button type="button" class="rail-item active" aria-current="page" title="Editor"><svg viewBox="0 0 24 24"><path d="M7 4h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Zm3 4v8l6-4-6-4Z"/></svg><span>Editor</span></button>
-        <button type="button" class="rail-item" disabled title="Templates — coming later"><svg viewBox="0 0 24 24"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm2 4v4h4V7H7Zm6 0v4h4V7h-4ZM7 13v4h4v-4H7Zm6 0v4h4v-4h-4Z"/></svg><span>Templates</span></button>
-        <button type="button" class="rail-item" disabled title="Assets — coming later"><svg viewBox="0 0 24 24"><path d="M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Zm1 11h12l-4-5-3 4-2-2-3 3Z"/></svg><span>Assets</span></button>
-        <button type="button" class="rail-item" disabled title="Projects — coming later"><svg viewBox="0 0 24 24"><path d="M4 6a2 2 0 0 1 2-2h5l2 2h5a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6Z"/></svg><span>Projects</span></button>
+      <div class="stage-shell" id="stageShell">
+        <div class="stage-backdrop" aria-hidden="true"></div>
+        <canvas id="stage" width="800" height="450" aria-label="Animation preview"></canvas>
       </div>
-      <div class="rail-bottom">
-        <button type="button" class="rail-item" disabled title="Settings — coming later"><svg viewBox="0 0 24 24"><path d="M12 8.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7Zm8 3.5-2.1-1.2.1-2.4-2.4-1.4-2 1.3L12 6l-1.6 1.8-2-1.3L6 7.9l.1 2.4L4 11.5v2.9l2.1 1.2-.1 2.4 2.4 1.4 2-1.3L12 20l1.6-1.8 2 1.3 2.4-1.4-.1-2.4 2.1-1.2V12Z"/></svg><span>Settings</span></button>
-        <button type="button" class="rail-item" disabled title="Help — coming later"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18Zm0 13.2a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm0-10.4a3.6 3.6 0 0 0-3.5 2.7l2 .5a1.6 1.6 0 1 1 2 1.9c-1 .4-1.6 1-1.6 2.4v.7h2v-.5c0-.6.2-.8.9-1.1A3.6 3.6 0 0 0 12 5.8Z"/></svg><span>Help</span></button>
-      </div>
-    </nav>
 
-    <section class="editor-area">
-      <section class="workspace">
-        <div class="viewport-toolbar">
-          <div class="viewport-left"><strong>Preview</strong><span id="canvasReadout">800 × 450</span></div>
-          <div class="viewport-center">
-            <button id="fitBtn" type="button" class="viewport-action active">Fit</button>
-            <select id="viewportZoom" aria-label="Viewport zoom"><option value="fit" selected>Fit</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100%</option><option value="1.5">150%</option></select>
-            <span class="toolbar-separator"></span>
-            <button id="viewportGridBtn" type="button" class="toolbar-icon small" title="Toggle grid" aria-label="Toggle grid"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4V4Zm5 2H6v3h3V6Zm2 0v3h3V6h-3Zm5 0v3h2V6h-2ZM6 11v3h3v-3H6Zm5 0v3h3v-3h-3Zm5 0v3h2v-3h-2ZM6 16v2h3v-2H6Zm5 0v2h3v-2h-3Zm5 0v2h2v-2h-2Z"/></svg></button>
-            <button id="viewportSafeBtn" type="button" class="toolbar-icon small active" title="Toggle safe guides" aria-label="Toggle safe guides"><svg viewBox="0 0 24 24"><path d="M5 3h4v2H7v2H5V3Zm10 0h4v4h-2V5h-2V3ZM5 17h2v2h2v2H5v-4Zm12 0h2v4h-4v-2h2v-2ZM8 8h8v8H8V8Zm2 2v4h4v-4h-4Z"/></svg></button>
+      <div class="transport" aria-label="Playback controls">
+        <button id="playBtn" type="button" class="play-button" aria-label="Play animation"><svg viewBox="0 0 24 24"><path d="m8 5 11 7-11 7V5Z"/></svg><span>Play</span></button>
+        <button id="restartBtn" type="button" class="icon-button" title="Jump to beginning" aria-label="Jump to beginning"><svg viewBox="0 0 24 24"><path d="M7 5v14H5V5h2Zm12 7-9 6V6l9 6Z"/></svg></button>
+        <button id="prevFrameBtn" type="button" class="icon-button" title="Previous frame" aria-label="Previous frame"><svg viewBox="0 0 24 24"><path d="M8 5v14H6V5h2Zm10 2v10l-8-5 8-5Z"/></svg></button>
+        <button id="nextFrameBtn" type="button" class="icon-button" title="Next frame" aria-label="Next frame"><svg viewBox="0 0 24 24"><path d="M16 5h2v14h-2V5ZM6 7l8 5-8 5V7Z"/></svg></button>
+        <select id="playbackRate" class="speed-select" aria-label="Playback speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select>
+        <div class="time-cluster"><output id="timeReadout">0.00 s</output><span>/</span><output id="totalTimeReadout">2.07 s</output></div>
+        <input id="scrubber" type="range" min="0" max="1" step="0.001" value="0" aria-label="Animation playhead" />
+        <button id="loopBtn" type="button" class="icon-button active" aria-pressed="true" title="Loop playback (L)" aria-label="Loop playback"><svg viewBox="0 0 24 24"><path d="M17.6 6H8.4l2.3-2.3-1.4-1.4L4.6 7l4.7 4.7 1.4-1.4L8.4 8h9.2A2.4 2.4 0 0 1 20 10.4V11h2v-.6A4.4 4.4 0 0 0 17.6 6ZM6.4 18h9.2l-2.3 2.3 1.4 1.4 4.7-4.7-4.7-4.7-1.4 1.4 2.3 2.3H6.4A2.4 2.4 0 0 1 4 13.6V13H2v.6A4.4 4.4 0 0 0 6.4 18Z"/></svg></button>
+        <span class="transport-divider"></span>
+        <button id="undoBtn" type="button" class="icon-button" title="Undo (Ctrl/Cmd+Z)" aria-label="Undo" disabled><svg viewBox="0 0 24 24"><path d="M9 7 4 12l5 5v-3h5a5 5 0 0 1 5 5h2a7 7 0 0 0-7-7H9V7Z"/></svg></button>
+        <button id="redoBtn" type="button" class="icon-button" title="Redo (Ctrl/Cmd+Shift+Z)" aria-label="Redo" disabled><svg viewBox="0 0 24 24"><path d="m15 7 5 5-5 5v-3h-5a5 5 0 0 0-5 5H3a7 7 0 0 1 7-7h5V7Z"/></svg></button>
+        <button id="resetBtn" type="button" class="reset-button" title="Reset to defaults">Reset</button>
+      </div>
+
+      <section class="timeline-panel" aria-label="Layer timeline">
+        <div class="timeline-head">
+          <div class="timeline-title-row"><strong>Timeline</strong><span id="timelineStatus">2.07 s</span></div>
+          <div class="timeline-head-actions">
+            <button id="snapBtn" type="button" class="micro-toggle active" aria-pressed="true" title="Snap timing to frames (S)"><svg viewBox="0 0 24 24"><path d="M7 3h3v7H7a4 4 0 0 1 0-8v1Zm7 0h3v-1a4 4 0 0 1 0 8h-3V3Zm-7 9h3v9H7a6 6 0 0 1 0-12v3Zm7 0h3V9a6 6 0 0 1 0 12h-3v-9Z"/></svg><span>Snap</span></button>
+            <div class="phase-legend"><span><i class="enter"></i>Enter</span><span><i class="hold"></i>Hold</span><span><i class="exit"></i>Exit</span></div>
           </div>
         </div>
-
-        <div class="stage-shell" id="stageShell"><div class="stage-backdrop" aria-hidden="true"></div><canvas id="stage" width="800" height="450" aria-label="Animation preview"></canvas></div>
-
-        <div class="transport">
-          <button id="playBtn" type="button" class="play-button" aria-label="Play animation"><svg viewBox="0 0 24 24"><path d="m8 5 11 7-11 7V5Z"/></svg><span>Play</span></button>
-          <button id="restartBtn" type="button" class="transport-icon" title="Jump to beginning" aria-label="Jump to beginning"><svg viewBox="0 0 24 24"><path d="M7 5v14H5V5h2Zm12 7-9 6V6l9 6Z"/></svg></button>
-          <button id="prevFrameBtn" type="button" class="transport-icon" title="Previous frame" aria-label="Previous frame"><svg viewBox="0 0 24 24"><path d="M8 5v14H6V5h2Zm10 2v10l-8-5 8-5Z"/></svg></button>
-          <button id="nextFrameBtn" type="button" class="transport-icon" title="Next frame" aria-label="Next frame"><svg viewBox="0 0 24 24"><path d="M16 5h2v14h-2V5ZM6 7l8 5-8 5V7Z"/></svg></button>
-          <select id="playbackRate" class="speed-select" aria-label="Playback speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select>
-          <div class="time-cluster"><output id="timeReadout">0.00 s</output><span>/</span><output id="totalTimeReadout">1.95 s</output></div>
-          <input id="scrubber" type="range" min="0" max="1" step="0.001" value="0" aria-label="Animation playhead" />
-          <input id="previewLoop" type="checkbox" checked hidden />
-          <button id="loopBtn" type="button" class="transport-icon loop-button active" aria-pressed="true" title="Loop playback (L)" aria-label="Loop playback"><svg viewBox="0 0 24 24"><path d="M17.6 6H8.4l2.3-2.3-1.4-1.4L4.6 7l4.7 4.7 1.4-1.4L8.4 8h9.2A2.4 2.4 0 0 1 20 10.4V11h2v-.6A4.4 4.4 0 0 0 17.6 6ZM6.4 18h9.2l-2.3 2.3 1.4 1.4 4.7-4.7-4.7-4.7-1.4 1.4 2.3 2.3H6.4A2.4 2.4 0 0 1 4 13.6V13H2v.6A4.4 4.4 0 0 0 6.4 18Z"/></svg></button>
-        </div>
-
-        <section class="timeline-panel" aria-label="Layer timeline">
-          <div class="timeline-head">
-            <div class="timeline-title-row"><strong>Timeline</strong><span id="timelineStatus">1.95 s</span></div>
-            <div class="timeline-head-actions">
-              <button id="snapBtn" type="button" class="micro-toggle active" aria-pressed="true" title="Snap timing to frames (S)"><svg viewBox="0 0 24 24"><path d="M7 3h3v7H7a4 4 0 0 1 0-8v1Zm7 0h3v-1a4 4 0 0 1 0 8h-3V3Zm-7 9h3v9H7a6 6 0 0 1 0-12v3Zm7 0h3V9a6 6 0 0 1 0 12h-3v-9Z"/></svg><span>Snap</span></button>
-              <div class="phase-legend"><span><i class="enter"></i>Enter</span><span><i class="hold"></i>Hold</span><span><i class="exit"></i>Exit</span></div>
-            </div>
+        <div class="timeline-grid">
+          <div class="layer-column-head">Layers</div>
+          <div class="timeline-ruler" id="timelineRuler" aria-label="Timeline ruler"></div>
+          <div class="layer-tree">
+            <button type="button" class="layer-row selected" data-layer-select="logo"><span class="layer-icon">◈</span><span>Logo</span><small id="logoLayerTime">0.00–1.95s</small></button>
+            <button type="button" class="layer-row" data-layer-select="text"><span class="layer-icon">T</span><span>Text</span><small id="textLayerTime">0.12–2.07s</small></button>
+            <div class="layer-row static"><span class="layer-icon">▣</span><span>Background</span><small>Static</small></div>
           </div>
-          <div class="timeline-grid">
-            <div class="layer-column-head">Layers</div>
-            <div class="timeline-ruler" id="timelineRuler" aria-label="Timeline ruler"></div>
-            <div class="layer-tree">
-              <button type="button" class="layer-row group selected" data-select-layer="lockup"><span class="disclosure">⌄</span><span class="layer-icon">◇</span><strong>Lockup</strong></button>
-              <button type="button" class="layer-row child" data-select-layer="logo"><span></span><span class="layer-icon">◈</span><span>Logo Mark</span></button>
-              <button type="button" class="layer-row child" data-select-layer="text"><span></span><span class="layer-icon">T</span><span>Claim / Text</span></button>
-              <button type="button" class="layer-row" data-select-layer="background"><span></span><span class="layer-icon">▣</span><span>Background</span></button>
-            </div>
-            <div id="timeline" class="timeline">
-              <div class="timeline-playhead" aria-hidden="true"></div>
-              <div class="timeline-row group-track" aria-hidden="true"><div class="static-track fill-track"></div></div>
-              <div class="timeline-row" data-layer="logo">
-                <div class="timing-track" data-track="logo" tabindex="0" aria-label="Logo timing range">
-                  <div class="timing-bar" data-bar="logo"><button class="timing-handle start" type="button" aria-label="Logo start"></button><div class="phase-strip"><span class="phase enter"></span><span class="phase hold"></span><span class="phase exit"></span></div><button class="phase-handle enter-end" type="button" aria-label="Enter end"></button><button class="phase-handle exit-start" type="button" aria-label="Exit start"></button><span class="timing-bar-body"><span>Enter</span><span>Hold</span><span>Exit</span></span><button class="timing-handle end" type="button" aria-label="Logo end"></button></div>
+          <div id="timeline" class="timeline">
+            <div class="timeline-playhead" aria-hidden="true"></div>
+            <div class="timeline-row" data-layer="logo">
+              <div class="timing-track" data-track="logo" aria-label="Logo timing range">
+                <div class="timing-bar" data-bar="logo">
+                  <button class="timing-handle start" type="button" aria-label="Move logo start"></button>
+                  <div class="phase-strip"><span class="phase enter"></span><span class="phase hold"></span><span class="phase exit"></span></div>
+                  <button class="phase-handle enter-end" type="button" aria-label="Logo enter end"></button>
+                  <button class="phase-handle exit-start" type="button" aria-label="Logo hold end"></button>
+                  <span class="timing-bar-body"><span>Enter</span><span>Hold</span><span>Exit</span></span>
+                  <button class="timing-handle end" type="button" aria-label="Logo end"></button>
                 </div>
-                <div class="timeline-meta"><span id="logoTimingLabel">0.00–1.95s</span><div class="timing-inputs"><label>Start <div class="mini-unit"><input id="logoStart" type="number" min="0" step="10" value="0" /><span>ms</span></div></label><label>End <div class="mini-unit"><input id="logoEnd" type="number" min="10" step="10" value="1950" /><span>ms</span></div></label></div></div>
               </div>
-              <div class="timeline-row" data-layer="text">
-                <div class="timing-track" data-track="text" tabindex="0" aria-label="Text timing range">
-                  <div class="timing-bar" data-bar="text"><button class="timing-handle start" type="button" aria-label="Text start"></button><div class="phase-strip"><span class="phase enter"></span><span class="phase hold"></span><span class="phase exit"></span></div><button class="phase-handle enter-end" type="button" aria-label="Enter end"></button><button class="phase-handle exit-start" type="button" aria-label="Exit start"></button><span class="timing-bar-body"><span>Enter</span><span>Hold</span><span>Exit</span></span><button class="timing-handle end" type="button" aria-label="Text end"></button></div>
-                </div>
-                <div class="timeline-meta"><span id="textTimingLabel">0.12–1.95s</span><div class="timing-inputs"><label>Start <div class="mini-unit"><input id="textStart" type="number" min="0" step="10" value="120" /><span>ms</span></div></label><label>End <div class="mini-unit"><input id="textEnd" type="number" min="10" step="10" value="1950" /><span>ms</span></div></label></div></div>
-              </div>
-              <div class="timeline-row background-track" aria-hidden="true"><div class="static-track"></div></div>
             </div>
+            <div class="timeline-row" data-layer="text">
+              <div class="timing-track" data-track="text" aria-label="Text timing range">
+                <div class="timing-bar" data-bar="text">
+                  <button class="timing-handle start" type="button" aria-label="Move text start"></button>
+                  <div class="phase-strip"><span class="phase enter"></span><span class="phase hold"></span><span class="phase exit"></span></div>
+                  <button class="phase-handle enter-end" type="button" aria-label="Text enter end"></button>
+                  <button class="phase-handle exit-start" type="button" aria-label="Text hold end"></button>
+                  <span class="timing-bar-body"><span>Enter</span><span>Hold</span><span>Exit</span></span>
+                  <button class="timing-handle end" type="button" aria-label="Text end"></button>
+                </div>
+              </div>
+            </div>
+            <div class="timeline-row background-row"><div class="static-track"></div></div>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <aside class="controls">
+      <nav class="tabs" aria-label="Editor controls">
+        <button type="button" class="tab active" data-tab="typography">Type</button>
+        <button type="button" class="tab" data-tab="lockup">Lockup</button>
+        <button type="button" class="tab" data-tab="logo">Logo</button>
+        <button type="button" class="tab" data-tab="motion">Motion</button>
+        <button type="button" class="tab" data-tab="canvas">Canvas</button>
+        <button type="button" class="tab" data-tab="export">Export</button>
+      </nav>
+      <div class="tab-panels">
+        <section class="tab-panel active" data-panel="typography">
+          <div class="section-heading"><h2>Typography</h2><span>Google Fonts</span></div>
+          <label>Claim <input id="headline" type="text" value="MORGEN MACHT MAN HEUTE." /></label>
+          <label>Font family<div class="inline-control"><input id="fontFamily" type="text" value="Anton" placeholder="Anton, Oswald, Roboto Condensed…" /><button id="loadFontBtn" type="button" class="secondary compact">Load</button></div></label>
+          <p class="hint" id="fontStatus">Anton loaded from Google Fonts.</p>
+          <label class="check-row"><input id="autoFit" type="checkbox" checked /> Fit claim to safe margins</label>
+          <div class="two-col">
+            <label>Font size <div class="unit-field"><input id="fontSize" type="number" min="10" max="400" step="1" value="52" /><span>px</span></div></label>
+            <label>Weight <input id="fontWeight" type="number" min="100" max="900" step="100" value="400" /></label>
+            <label>Letter spacing <div class="unit-field"><input id="letterSpacing" type="number" min="-10" max="40" step="0.5" value="2" /><span>px</span></div></label>
+            <label>Word spacing <div class="unit-field"><input id="wordSpacing" type="number" min="-20" max="80" step="1" value="0" /><span>px</span></div></label>
+            <label>Text align<select id="textAlign"><option value="center" selected>Center</option><option value="left">Left</option><option value="right">Right</option></select></label>
+            <label>Text casing<select id="textTransform"><option value="none">As typed</option><option value="uppercase" selected>UPPERCASE</option><option value="capitalize">Capitalize</option><option value="lowercase">lowercase</option></select></label>
+            <label>Text color <input id="textColor" type="color" value="#ffffff" /></label>
           </div>
         </section>
-      </section>
 
-      <aside class="controls">
-        <header class="controls-header"><div><span class="inspector-kicker">Inspector</span><h1 id="inspectorTitle">Type</h1></div></header>
-        <nav class="tabs" aria-label="Editor controls"><button type="button" class="tab active" data-tab="typography">Type</button><button type="button" class="tab" data-tab="lockup">Lockup</button><button type="button" class="tab" data-tab="logo">Logo</button><button type="button" class="tab" data-tab="motion">Motion</button><button type="button" class="tab" data-tab="canvas">Canvas</button><button type="button" class="tab" data-tab="export">Export</button></nav>
-        <div class="tab-panels">
-          <section class="tab-panel active" data-panel="typography">
-            <div class="section-heading"><h2>Typography</h2><span>Google Fonts</span></div>
-            <label>Claim <input id="headline" type="text" value="MORGEN MACHT MAN HEUTE." /></label>
-            <label>Font family<div class="inline-control"><input id="fontFamily" type="text" value="Anton" placeholder="Anton, Oswald, Roboto Condensed…" /><button id="loadFontBtn" type="button" class="secondary compact">Load</button></div></label>
-            <p class="hint" id="fontStatus">Anton loaded from Google Fonts.</p>
-            <label class="check-row"><input id="autoFit" type="checkbox" checked /> Fit claim to safe margins</label>
-            <div class="two-col">
-              <label>Font size <div class="unit-field"><input id="fontSize" type="number" min="10" max="400" step="1" value="52" /><span>px</span></div></label>
-              <label>Weight <input id="fontWeight" type="number" min="100" max="900" step="100" value="400" /></label>
-              <label>Letter spacing <div class="unit-field"><input id="letterSpacing" type="number" min="-10" max="40" step="0.5" value="2" /><span>px</span></div></label>
-              <label>Word spacing <div class="unit-field"><input id="wordSpacing" type="number" min="-20" max="80" step="1" value="0" /><span>px</span></div></label>
-              <label>Text align<select id="textAlign"><option value="center" selected>Center</option><option value="left">Left</option><option value="right">Right</option></select></label>
-              <label>Text casing<select id="textTransform"><option value="none">As typed</option><option value="uppercase" selected>UPPERCASE</option><option value="capitalize">Capitalize</option><option value="lowercase">lowercase</option></select></label>
-              <label>Text color <input id="textColor" type="color" value="#ffffff" /></label>
-            </div>
-          </section>
+        <section class="tab-panel" data-panel="lockup">
+          <div class="section-heading"><h2>Lockup</h2><span>Logo + claim</span></div>
+          <label>Text position<select id="position"><option value="below" selected>Below logo</option><option value="above">Above logo</option><option value="right">Right of logo</option><option value="left">Left of logo</option></select></label>
+          <div class="two-col">
+            <label>Gap <div class="unit-field"><input id="gap" type="number" min="0" max="400" step="2" value="28" /><span>px</span></div></label>
+            <label>Horizontal align<select id="alignment"><option value="center" selected>Center</option><option value="start">Start</option><option value="end">End</option></select></label>
+            <label>Vertical align<select id="verticalAlignment"><option value="center" selected>Center</option><option value="start">Top</option><option value="end">Bottom</option></select></label>
+            <label>Group X <div class="unit-field"><input id="offsetX" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label>
+            <label>Group Y <div class="unit-field"><input id="offsetY" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label>
+            <label>Logo X <div class="unit-field"><input id="logoOffsetX" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label>
+            <label>Logo Y <div class="unit-field"><input id="logoOffsetY" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label>
+            <label>Text X <div class="unit-field"><input id="textOffsetX" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label>
+            <label>Text Y <div class="unit-field"><input id="textOffsetY" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label>
+          </div>
+        </section>
 
-          <section class="tab-panel" data-panel="lockup">
-            <div class="section-heading"><h2>Lockup</h2><span>Logo + claim</span></div>
-            <label>Text position<select id="position"><option value="below" selected>Below logo</option><option value="above">Above logo</option><option value="right">Right of logo</option><option value="left">Left of logo</option></select></label>
-            <div class="two-col">
-              <label>Gap <div class="unit-field"><input id="gap" type="number" min="0" max="400" step="2" value="28" /><span>px</span></div></label>
-              <label>Horizontal align<select id="alignment"><option value="center" selected>Center</option><option value="start">Start</option><option value="end">End</option></select></label>
-              <label>Vertical align<select id="verticalAlignment"><option value="center" selected>Center</option><option value="start">Top</option><option value="end">Bottom</option></select></label>
-              <label>Group X <div class="unit-field"><input id="offsetX" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label>
-              <label>Group Y <div class="unit-field"><input id="offsetY" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label>
-              <label>Logo X <div class="unit-field"><input id="logoOffsetX" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label>
-              <label>Logo Y <div class="unit-field"><input id="logoOffsetY" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label>
-              <label>Text X <div class="unit-field"><input id="textOffsetX" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label>
-              <label>Text Y <div class="unit-field"><input id="textOffsetY" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label>
-            </div>
-          </section>
+        <section class="tab-panel" data-panel="logo">
+          <div class="section-heading"><h2>Logo</h2><span>Built-in SVGs</span></div>
+          <div class="logo-picker" id="logoPicker" role="radiogroup" aria-label="Built-in logo variant">
+            <button type="button" class="logo-choice active" data-logo-type="wordmark"><span class="logo-preview"><img src="./assets/logos/wordmark.svg" alt="" /></span><span>Wordmark</span></button>
+            <button type="button" class="logo-choice" data-logo-type="combination"><span class="logo-preview"><img src="./assets/logos/combination.svg" alt="" /></span><span>Combination</span></button>
+            <button type="button" class="logo-choice" data-logo-type="stacked"><span class="logo-preview"><img src="./assets/logos/stacked.svg" alt="" /></span><span>Stacked</span></button>
+            <button type="button" class="logo-choice" data-logo-type="lettermark"><span class="logo-preview"><img src="./assets/logos/lettermark.svg" alt="" /></span><span>Lettermark</span></button>
+          </div>
+          <label>Custom SVG / image <input id="logoFile" type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp,.svg" /></label>
+          <div class="two-col"><label>Logo width <div class="unit-field"><input id="logoSize" type="number" min="20" max="1400" step="5" value="220" /><span>px</span></div></label><label>Logo color <input id="logoColor" type="color" value="#ffffff" /></label></div>
+        </section>
 
-          <section class="tab-panel" data-panel="logo">
-            <div class="section-heading"><h2>Logo</h2><span>Built-in SVGs</span></div>
-            <div class="logo-picker" id="logoPicker" role="radiogroup" aria-label="Built-in logo variant">
-              <button type="button" class="logo-choice active" data-logo-type="wordmark" role="radio" aria-checked="true"><span class="logo-preview"><img src="./assets/logos/wordmark.svg" alt="" /></span><span>Wordmark</span></button>
-              <button type="button" class="logo-choice" data-logo-type="combination" role="radio" aria-checked="false"><span class="logo-preview"><img src="./assets/logos/combination.svg" alt="" /></span><span>Combination</span></button>
-              <button type="button" class="logo-choice" data-logo-type="stacked" role="radio" aria-checked="false"><span class="logo-preview"><img src="./assets/logos/stacked.svg" alt="" /></span><span>Stacked</span></button>
-              <button type="button" class="logo-choice" data-logo-type="lettermark" role="radio" aria-checked="false"><span class="logo-preview"><img src="./assets/logos/lettermark.svg" alt="" /></span><span>Lettermark</span></button>
-            </div>
-            <input id="logoType" type="hidden" value="wordmark" />
-            <label>Custom SVG / image <input id="logoFile" type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp,.svg" /></label>
-            <div class="two-col"><label>Logo width <div class="unit-field"><input id="logoSize" type="number" min="20" max="1400" step="5" value="220" /><span>px</span></div></label><label>Logo color <input id="logoColor" type="color" value="#ffffff" /></label></div>
-            <p class="hint">Built-in SVGs preserve their aspect ratio. Uploading a custom asset never stretches it.</p>
-          </section>
+        <section class="tab-panel" data-panel="motion">
+          <div class="section-heading"><h2>Motion</h2><span id="motionLayerLabel">Logo layer</span></div>
+          <div class="layer-segmented" role="group" aria-label="Motion layer"><button id="motionLayerLogo" type="button" class="active">Logo</button><button id="motionLayerText" type="button">Text</button></div>
+          <div class="preset-row"><button type="button" data-motion-preset="smooth">Smooth</button><button type="button" data-motion-preset="snappy">Snappy</button><button type="button" data-motion-preset="soft">Soft</button><button type="button" data-motion-preset="pop">Pop</button></div>
+          <label>Lifecycle<select id="flowMode"><option value="in-hold-out" selected>In → Hold → Out</option><option value="in-only">In only</option><option value="out-only">Out only</option><option value="in-out">In → Out</option><option value="in-stay">In → Stay</option><option value="static">Static</option></select></label>
+          <div class="two-col">
+            <label>Layer start <div class="unit-field"><input id="layerStart" type="number" min="0" max="10000" step="10" value="0" /><span>ms</span></div></label>
+            <label>Enter <div class="unit-field"><input id="enterDuration" type="number" min="0" max="5000" step="25" value="850" /><span>ms</span></div></label>
+            <label>Hold <div class="unit-field"><input id="holdDuration" type="number" min="0" max="10000" step="25" value="350" /><span>ms</span></div></label>
+            <label>Exit <div class="unit-field"><input id="exitDuration" type="number" min="0" max="5000" step="25" value="750" /><span>ms</span></div></label>
+          </div>
+          <p class="hint">Each layer has its own independent Enter, Hold and Exit timing. Drag the phase boundaries directly in the timeline.</p>
+          <div class="two-col">
+            <label>Enter direction<select id="enterDirection"><option value="from-bottom" selected>From bottom</option><option value="from-top">From top</option><option value="from-left">From left</option><option value="from-right">From right</option><option value="none">None</option></select></label>
+            <label>Exit direction<select id="exitDirection"><option value="to-top" selected>To top</option><option value="to-bottom">To bottom</option><option value="to-left">To left</option><option value="to-right">To right</option><option value="none">None</option></select></label>
+            <label>Travel <div class="unit-field"><input id="layerTravel" type="number" min="0" max="800" step="5" value="50" /><span>px</span></div></label>
+            <label>Start scale <div class="unit-field"><input id="layerScale" type="number" min="0" max="3" step="0.01" value="0.94" /><span>×</span></div></label>
+          </div>
+          <label id="staggerControl">Word stagger <input id="wordStagger" type="range" min="0" max="200" step="5" value="35" /><output id="wordStaggerOut">35 ms</output></label>
+          <div class="curve-card">
+            <div class="group-title-row"><label>Curve<select id="curveTarget"><option value="enter" selected>Entrance</option><option value="exit">Exit</option></select></label><label>Preset<select id="curvePreset"><option value="custom">Custom</option><option value="fast">Fast Out</option><option value="expo">Expo Out</option><option value="smooth">Ease In Out</option><option value="back">Back</option><option value="snappy" selected>Snappy</option></select></label></div>
+            <svg id="curveViz" viewBox="0 0 260 170" role="img" aria-label="Cubic Bézier curve editor"><path class="curve-grid" d="M20 20H240M20 63.3H240M20 106.6H240M20 150H240M20 20V150M93.3 20V150M166.6 20V150M240 20V150"/><path class="grid-line" d="M20 150H240M20 20V150"/><path class="guide" id="guide1"/><path class="guide" id="guide2"/><path class="curve" id="curvePath"/><circle class="curve-endpoint" cx="20" cy="150" r="3"/><circle class="curve-endpoint" cx="240" cy="63" r="3"/><circle class="handle" id="handle1" r="6" tabindex="0"/><circle class="handle" id="handle2" r="6" tabindex="0"/></svg>
+            <div class="four-col"><label>x1 <input id="x1" type="number" min="0" max="1" step="0.01" value="0.05" /></label><label>y1 <input id="y1" type="number" min="-2" max="3" step="0.01" value="0.9" /></label><label>x2 <input id="x2" type="number" min="0" max="1" step="0.01" value="0.1" /></label><label>y2 <input id="y2" type="number" min="-2" max="3" step="0.01" value="1" /></label></div>
+          </div>
+        </section>
 
-          <section class="tab-panel" data-panel="motion">
-            <div class="section-heading"><h2>Motion</h2><span>Deterministic lifecycle</span></div>
-            <div class="smart-presets" aria-label="Quick motion presets">
-              <button type="button" data-motion-preset="smooth"><strong>Smooth</strong><span>Soft brand reveal</span></button>
-              <button type="button" data-motion-preset="snappy"><strong>Snappy</strong><span>Fast UI motion</span></button>
-              <button type="button" data-motion-preset="soft"><strong>Soft</strong><span>Slow premium ease</span></button>
-              <button type="button" data-motion-preset="pop"><strong>Pop</strong><span>Playful overshoot</span></button>
-            </div>
-            <label>Lifecycle<select id="flowMode"><option value="in-hold-out" selected>In → Hold → Out</option><option value="in-only">In only</option><option value="out-only">Out only</option><option value="in-out">In → Out</option><option value="in-stay">In → Stay</option><option value="static">Static</option></select></label>
-            <div class="three-col"><label>Enter <div class="unit-field"><input id="enterDuration" type="number" min="50" max="5000" step="25" value="850" /><span>ms</span></div></label><label>Hold <div class="unit-field"><input id="holdDuration" type="number" min="0" max="10000" step="50" value="350" /><span>ms</span></div></label><label>Exit <div class="unit-field"><input id="exitDuration" type="number" min="50" max="5000" step="25" value="750" /><span>ms</span></div></label></div>
-            <div class="two-col">
-              <label>Enter direction<select id="enterDirection"><option value="from-bottom" selected>From bottom</option><option value="from-top">From top</option><option value="from-left">From left</option><option value="from-right">From right</option><option value="none">None</option></select></label>
-              <label>Exit direction<select id="exitDirection"><option value="to-top" selected>To top</option><option value="to-bottom">To bottom</option><option value="to-left">To left</option><option value="to-right">To right</option><option value="none">None</option></select></label>
-              <label>Logo travel <div class="unit-field"><input id="logoTravel" type="number" min="0" max="800" step="5" value="50" /><span>px</span></div></label>
-              <label>Text travel <div class="unit-field"><input id="textTravel" type="number" min="0" max="800" step="5" value="50" /><span>px</span></div></label>
-              <label>Logo start scale <div class="unit-field"><input id="logoScale" type="number" min="0" max="3" step="0.01" value="0.94" /><span>×</span></div></label>
-              <label>Text start scale <div class="unit-field"><input id="textScale" type="number" min="0" max="3" step="0.01" value="0.96" /><span>×</span></div></label>
-            </div>
-            <label>Word stagger <input id="wordStagger" type="range" min="0" max="200" step="5" value="35" /><output id="wordStaggerOut">35 ms</output></label>
-            <div class="curve-card">
-              <div class="group-title-row"><label>Curve<select id="curveTarget"><option value="enter" selected>Entrance</option><option value="exit">Exit</option></select></label><label>Preset<select id="preset"><option value="custom">Custom</option><option value="0.22,1,0.36,1">Fast Out</option><option value="0.16,1,0.3,1">Expo Out</option><option value="0.65,0,0.35,1">Ease In Out</option><option value="0.34,1.56,0.64,1">Back</option><option value="0.05,0.9,0.1,1" selected>Snappy</option></select></label></div>
-              <svg id="curveViz" viewBox="0 0 260 170" role="img" aria-label="Cubic Bézier curve editor"><path class="curve-grid" d="M20 20H240M20 63.3H240M20 106.6H240M20 150H240M20 20V150M93.3 20V150M166.6 20V150M240 20V150"/><path class="grid-line" d="M20 150H240M20 20V150"/><path class="guide" id="guide1"/><path class="guide" id="guide2"/><path class="curve" id="curvePath"/><circle class="curve-endpoint" cx="20" cy="150" r="3"/><circle class="curve-endpoint" cx="240" cy="63" r="3"/><circle class="handle" id="handle1" r="6" tabindex="0"/><circle class="handle" id="handle2" r="6" tabindex="0"/></svg>
-              <div class="four-col"><label>x1 <input id="x1" type="number" min="0" max="1" step="0.01" value="0.05" /></label><label>y1 <input id="y1" type="number" min="-2" max="3" step="0.01" value="0.9" /></label><label>x2 <input id="x2" type="number" min="0" max="1" step="0.01" value="0.1" /></label><label>y2 <input id="y2" type="number" min="-2" max="3" step="0.01" value="1" /></label></div>
-            </div>
-          </section>
+        <section class="tab-panel" data-panel="canvas">
+          <div class="section-heading"><h2>Canvas</h2><span>Exact output size</span></div>
+          <label>Preset<select id="canvasPreset"><option value="custom" selected>Current / custom (800×450)</option><option value="1:1">1:1 Square (1080×1080)</option><option value="16:9">16:9 Landscape (1920×1080)</option><option value="9:16">9:16 Story / Reel (1080×1920)</option><option value="4:5">4:5 Social (1080×1350)</option><option value="4:3">4:3 Standard (1200×900)</option><option value="banner">Wide Banner (1200×400)</option></select></label>
+          <div class="two-col"><label>Width <div class="unit-field"><input id="canvasWidth" type="number" min="120" max="4096" step="1" value="800" /><span>px</span></div></label><label>Height <div class="unit-field"><input id="canvasHeight" type="number" min="120" max="4096" step="1" value="450" /><span>px</span></div></label><label>Background <input id="bgColor" type="color" value="#103e36" /></label><label>Safe X <div class="unit-field"><input id="marginX" type="number" min="0" max="1200" step="5" value="60" /><span>px</span></div></label><label>Safe Y <div class="unit-field"><input id="marginY" type="number" min="0" max="1200" step="5" value="40" /><span>px</span></div></label></div>
+          <label class="check-row"><input id="showMargins" type="checkbox" checked /> Show safe-area guides</label><label class="check-row"><input id="showGrid" type="checkbox" /> Show grid</label>
+        </section>
 
-          <section class="tab-panel" data-panel="canvas">
-            <div class="section-heading"><h2>Canvas</h2><span>Exact output size</span></div>
-            <label>Preset<select id="canvasPreset"><option value="custom" selected>Current / custom (800×450)</option><option value="1:1">1:1 Square (1080×1080)</option><option value="16:9">16:9 Landscape (1920×1080)</option><option value="9:16">9:16 Story / Reel (1080×1920)</option><option value="4:5">4:5 Social (1080×1350)</option><option value="4:3">4:3 Standard (1200×900)</option><option value="banner">Wide Banner (1200×400)</option></select></label>
-            <div class="two-col"><label>Width <div class="unit-field"><input id="canvasWidth" type="number" min="120" max="4096" step="1" value="800" /><span>px</span></div></label><label>Height <div class="unit-field"><input id="canvasHeight" type="number" min="120" max="4096" step="1" value="450" /><span>px</span></div></label><label>Background <input id="bgColor" type="color" value="#103e36" /></label><label>Safe X <div class="unit-field"><input id="marginX" type="number" min="0" max="1200" step="5" value="60" /><span>px</span></div></label><label>Safe Y <div class="unit-field"><input id="marginY" type="number" min="0" max="1200" step="5" value="40" /><span>px</span></div></label></div>
-            <label class="check-row"><input id="showMargins" type="checkbox" checked /> Show safe-area guides</label><label class="check-row"><input id="showGrid" type="checkbox" /> Show grid</label>
-          </section>
-
-          <section class="tab-panel" data-panel="export">
-            <div class="section-heading"><h2>Export</h2><span>Same renderer as preview</span></div>
-            <div class="two-col"><label>Format<select id="exportFormat"><option value="gif" selected>GIF</option></select></label><label>GIF FPS <input id="fps" type="number" min="8" max="60" step="1" value="30" /></label><label>Resolution<select id="exportScale"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label><label>Colors<select id="gifColors"><option value="64">64</option><option value="128">128</option><option value="256" selected>256</option></select></label></div>
-            <label class="check-row"><input id="gifLoop" type="checkbox" checked /> Loop exported GIF</label>
-            <div class="export-summary"><span>Output</span><strong id="outputSizeReadout">800 × 450</strong></div><div class="export-summary"><span>Estimated frames</span><strong id="frameEstimate">59</strong></div>
-            <button id="exportBtn" type="button" class="primary-button full-width">Export animated GIF</button><button id="pngBtn" type="button" class="secondary full-width">Download current frame PNG</button><progress id="exportProgress" max="1" value="0"></progress><p id="status" role="status" aria-live="polite">Ready.</p><p class="hint">GIF and PNG both use the exact same deterministic Canvas renderer as preview.</p>
-            <div class="settings-transfer">
-              <div class="section-heading compact-heading"><h2>Reusable setup</h2><span>JSON</span></div>
-              <p class="hint">Save this animation setup and load it later in another browser. Custom uploaded image files are not embedded.</p>
-              <div class="two-col"><button id="downloadSetupBtn" type="button" class="secondary">Download setup</button><button id="loadSetupBtn" type="button" class="secondary">Load setup</button></div>
-              <input id="setupFile" type="file" accept="application/json,.json" hidden />
-            </div>
-          </section>
-        </div>
-      </aside>
-    </section>
+        <section class="tab-panel" data-panel="export">
+          <div class="section-heading"><h2>Export</h2><span>Same renderer as preview</span></div>
+          <div class="two-col"><label>Format<select id="exportFormat"><option value="gif" selected>GIF</option></select></label><label>GIF FPS <input id="fps" type="number" min="8" max="60" step="1" value="30" /></label><label>Resolution<select id="exportScale"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label><label>Colors<select id="gifColors"><option value="64">64</option><option value="128">128</option><option value="256" selected>256</option></select></label></div>
+          <label class="check-row"><input id="gifLoop" type="checkbox" checked /> Loop exported GIF</label>
+          <div class="export-summary"><span>Output</span><strong id="outputSizeReadout">800 × 450</strong></div><div class="export-summary"><span>Estimated frames</span><strong id="frameEstimate">63</strong></div>
+          <button id="exportBtn" type="button" class="primary-button full-width">Export animated GIF</button><button id="pngBtn" type="button" class="secondary full-width">Download current frame PNG</button>
+          <progress id="exportProgress" max="1" value="0"></progress><p id="status" role="status" aria-live="polite">Ready.</p>
+          <div class="setup-actions"><button id="downloadSetupBtn" type="button" class="secondary">Download setup JSON</button><button id="loadSetupBtn" type="button" class="secondary">Load setup JSON</button><input id="setupFile" type="file" accept="application/json,.json" hidden /></div>
+        </section>
+      </div>
+    </aside>
   </main>
   <script type="module" src="./app.js"></script>
-  <script type="module" src="./workflow-features.js"></script>
 </body>
 </html>
