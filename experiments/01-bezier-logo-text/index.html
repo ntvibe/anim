@@ -13,11 +13,7 @@
   <main class="studio-shell">
     <section class="workspace">
       <div class="viewport-toolbar">
-        <div class="viewport-left">
-          <strong>Animation Studio</strong>
-          <span class="canvas-size" id="canvasReadout">800 × 450</span>
-          <span class="save-status" id="saveStatus"><i></i>Autosaved</span>
-        </div>
+        <div class="viewport-left"><strong>Animation Studio</strong><span class="canvas-size" id="canvasReadout">800 × 450</span><span class="save-status" id="saveStatus"><i></i>Autosaved</span></div>
         <div class="viewport-actions">
           <button id="fitBtn" type="button" class="viewport-action active">Fit</button>
           <select id="viewportZoom" aria-label="Viewport zoom"><option value="fit" selected>Fit</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100%</option><option value="1.5">150%</option></select>
@@ -27,10 +23,7 @@
         </div>
       </div>
 
-      <div class="stage-shell" id="stageShell">
-        <div class="stage-backdrop" aria-hidden="true"></div>
-        <canvas id="stage" width="800" height="450" aria-label="Animation preview"></canvas>
-      </div>
+      <div class="stage-shell" id="stageShell"><div class="stage-backdrop" aria-hidden="true"></div><canvas id="stage" width="800" height="450" aria-label="Animation preview"></canvas></div>
 
       <div class="transport" aria-label="Playback controls">
         <button id="playBtn" type="button" class="play-button" aria-label="Play animation"><svg viewBox="0 0 24 24"><path d="m8 5 11 7-11 7V5Z"/></svg><span>Play</span></button>
@@ -51,59 +44,22 @@
         <div class="timeline-head">
           <div class="timeline-title-row"><strong>Timeline</strong><span id="timelineStatus">2.07 s</span></div>
           <div class="timeline-head-actions">
+            <button id="addNullBtn" type="button" class="micro-toggle add-null" title="Add null object"><span>＋</span><strong>Null</strong></button>
             <button id="snapBtn" type="button" class="micro-toggle active" aria-pressed="true" title="Snap timing to frames (S)"><svg viewBox="0 0 24 24"><path d="M7 3h3v7H7a4 4 0 0 1 0-8v1Zm7 0h3v-1a4 4 0 0 1 0 8h-3V3Zm-7 9h3v9H7a6 6 0 0 1 0-12v3Zm7 0h3V9a6 6 0 0 1 0 12h-3v-9Z"/></svg><span>Snap</span></button>
-            <div class="phase-legend"><span><i class="enter"></i>Enter</span><span><i class="hold"></i>Hold</span><span><i class="exit"></i>Exit</span></div>
+            <div class="phase-legend"><span><i class="enter"></i>Enter</span><span><i class="hold"></i>Hold</span><span><i class="exit"></i>Exit</span><span><i class="position"></i>A→B</span></div>
           </div>
         </div>
         <div class="timeline-grid">
           <div class="layer-column-head">Layers</div>
           <div class="timeline-ruler" id="timelineRuler" aria-label="Timeline ruler"></div>
-          <div class="layer-tree">
-            <button type="button" class="layer-row selected" data-layer-select="logo"><span class="layer-icon">◈</span><span>Logo</span><small id="logoLayerTime">0.00–1.95s</small></button>
-            <button type="button" class="layer-row" data-layer-select="text"><span class="layer-icon">T</span><span>Text</span><small id="textLayerTime">0.12–2.07s</small></button>
-            <div class="layer-row static"><span class="layer-icon">▣</span><span>Background</span><small>Static</small></div>
-          </div>
-          <div id="timeline" class="timeline">
-            <div class="timeline-playhead" aria-hidden="true"></div>
-            <div class="timeline-row" data-layer="logo">
-              <div class="timing-track" data-track="logo" aria-label="Logo timing range">
-                <div class="timing-bar" data-bar="logo">
-                  <button class="timing-handle start" type="button" aria-label="Move logo start"></button>
-                  <div class="phase-strip"><span class="phase enter"></span><span class="phase hold"></span><span class="phase exit"></span></div>
-                  <button class="phase-handle enter-end" type="button" aria-label="Logo enter end"></button>
-                  <button class="phase-handle exit-start" type="button" aria-label="Logo hold end"></button>
-                  <span class="timing-bar-body"><span>Enter</span><span>Hold</span><span>Exit</span></span>
-                  <button class="timing-handle end" type="button" aria-label="Logo end"></button>
-                </div>
-              </div>
-            </div>
-            <div class="timeline-row" data-layer="text">
-              <div class="timing-track" data-track="text" aria-label="Text timing range">
-                <div class="timing-bar" data-bar="text">
-                  <button class="timing-handle start" type="button" aria-label="Move text start"></button>
-                  <div class="phase-strip"><span class="phase enter"></span><span class="phase hold"></span><span class="phase exit"></span></div>
-                  <button class="phase-handle enter-end" type="button" aria-label="Text enter end"></button>
-                  <button class="phase-handle exit-start" type="button" aria-label="Text hold end"></button>
-                  <span class="timing-bar-body"><span>Enter</span><span>Hold</span><span>Exit</span></span>
-                  <button class="timing-handle end" type="button" aria-label="Text end"></button>
-                </div>
-              </div>
-            </div>
-            <div class="timeline-row background-row"><div class="static-track"></div></div>
-          </div>
+          <div class="layer-tree" id="layerTree"></div>
+          <div id="timeline" class="timeline"><div class="timeline-playhead" aria-hidden="true"></div></div>
         </div>
       </section>
     </section>
 
     <aside class="controls">
-      <nav class="tabs" aria-label="Editor controls">
-        <button type="button" class="tab active" data-tab="typography">Type</button>
-        <button type="button" class="tab" data-tab="lockup">Lockup</button>
-        <button type="button" class="tab" data-tab="logo">Logo</button>
-        <button type="button" class="tab" data-tab="motion">Motion</button>
-        <button type="button" class="tab" data-tab="canvas">Canvas</button>
-        <button type="button" class="tab" data-tab="export">Export</button>
-      </nav>
+      <nav class="tabs" aria-label="Editor controls"><button type="button" class="tab active" data-tab="typography">Type</button><button type="button" class="tab" data-tab="lockup">Lockup</button><button type="button" class="tab" data-tab="logo">Logo</button><button type="button" class="tab" data-tab="motion">Motion</button><button type="button" class="tab" data-tab="canvas">Canvas</button><button type="button" class="tab" data-tab="export">Export</button></nav>
       <div class="tab-panels">
         <section class="tab-panel active" data-panel="typography">
           <div class="section-heading"><h2>Typography</h2><span>Google Fonts</span></div>
@@ -111,66 +67,47 @@
           <label>Font family<div class="inline-control"><input id="fontFamily" type="text" value="Anton" placeholder="Anton, Oswald, Roboto Condensed…" /><button id="loadFontBtn" type="button" class="secondary compact">Load</button></div></label>
           <p class="hint" id="fontStatus">Anton loaded from Google Fonts.</p>
           <label class="check-row"><input id="autoFit" type="checkbox" checked /> Fit claim to safe margins</label>
-          <div class="two-col">
-            <label>Font size <div class="unit-field"><input id="fontSize" type="number" min="10" max="400" step="1" value="52" /><span>px</span></div></label>
-            <label>Weight <input id="fontWeight" type="number" min="100" max="900" step="100" value="400" /></label>
-            <label>Letter spacing <div class="unit-field"><input id="letterSpacing" type="number" min="-10" max="40" step="0.5" value="2" /><span>px</span></div></label>
-            <label>Word spacing <div class="unit-field"><input id="wordSpacing" type="number" min="-20" max="80" step="1" value="0" /><span>px</span></div></label>
-            <label>Text align<select id="textAlign"><option value="center" selected>Center</option><option value="left">Left</option><option value="right">Right</option></select></label>
-            <label>Text casing<select id="textTransform"><option value="none">As typed</option><option value="uppercase" selected>UPPERCASE</option><option value="capitalize">Capitalize</option><option value="lowercase">lowercase</option></select></label>
-            <label>Text color <input id="textColor" type="color" value="#ffffff" /></label>
-          </div>
+          <div class="two-col"><label>Font size <div class="unit-field"><input id="fontSize" type="number" min="10" max="400" step="1" value="52" /><span>px</span></div></label><label>Weight <input id="fontWeight" type="number" min="100" max="900" step="100" value="400" /></label><label>Letter spacing <div class="unit-field"><input id="letterSpacing" type="number" min="-10" max="40" step="0.5" value="2" /><span>px</span></div></label><label>Word spacing <div class="unit-field"><input id="wordSpacing" type="number" min="-20" max="80" step="1" value="0" /><span>px</span></div></label><label>Text align<select id="textAlign"><option value="center" selected>Center</option><option value="left">Left</option><option value="right">Right</option></select></label><label>Text casing<select id="textTransform"><option value="none">As typed</option><option value="uppercase" selected>UPPERCASE</option><option value="capitalize">Capitalize</option><option value="lowercase">lowercase</option></select></label><label>Text color <input id="textColor" type="color" value="#ffffff" /></label></div>
         </section>
 
         <section class="tab-panel" data-panel="lockup">
           <div class="section-heading"><h2>Lockup</h2><span>Logo + claim</span></div>
           <label>Text position<select id="position"><option value="below" selected>Below logo</option><option value="above">Above logo</option><option value="right">Right of logo</option><option value="left">Left of logo</option></select></label>
-          <div class="two-col">
-            <label>Gap <div class="unit-field"><input id="gap" type="number" min="0" max="400" step="2" value="28" /><span>px</span></div></label>
-            <label>Horizontal align<select id="alignment"><option value="center" selected>Center</option><option value="start">Start</option><option value="end">End</option></select></label>
-            <label>Vertical align<select id="verticalAlignment"><option value="center" selected>Center</option><option value="start">Top</option><option value="end">Bottom</option></select></label>
-            <label>Group X <div class="unit-field"><input id="offsetX" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label>
-            <label>Group Y <div class="unit-field"><input id="offsetY" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label>
-            <label>Logo X <div class="unit-field"><input id="logoOffsetX" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label>
-            <label>Logo Y <div class="unit-field"><input id="logoOffsetY" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label>
-            <label>Text X <div class="unit-field"><input id="textOffsetX" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label>
-            <label>Text Y <div class="unit-field"><input id="textOffsetY" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label>
-          </div>
+          <div class="two-col"><label>Gap <div class="unit-field"><input id="gap" type="number" min="0" max="400" step="2" value="28" /><span>px</span></div></label><label>Horizontal align<select id="alignment"><option value="center" selected>Center</option><option value="start">Start</option><option value="end">End</option></select></label><label>Vertical align<select id="verticalAlignment"><option value="center" selected>Center</option><option value="start">Top</option><option value="end">Bottom</option></select></label><label>Group X <div class="unit-field"><input id="offsetX" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label><label>Group Y <div class="unit-field"><input id="offsetY" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label><label>Logo X <div class="unit-field"><input id="logoOffsetX" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label><label>Logo Y <div class="unit-field"><input id="logoOffsetY" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label><label>Text X <div class="unit-field"><input id="textOffsetX" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label><label>Text Y <div class="unit-field"><input id="textOffsetY" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label></div>
         </section>
 
         <section class="tab-panel" data-panel="logo">
           <div class="section-heading"><h2>Logo</h2><span>Built-in SVGs</span></div>
-          <div class="logo-picker" id="logoPicker" role="radiogroup" aria-label="Built-in logo variant">
-            <button type="button" class="logo-choice active" data-logo-type="wordmark"><span class="logo-preview"><img src="./assets/logos/wordmark.svg" alt="" /></span><span>Wordmark</span></button>
-            <button type="button" class="logo-choice" data-logo-type="combination"><span class="logo-preview"><img src="./assets/logos/combination.svg" alt="" /></span><span>Combination</span></button>
-            <button type="button" class="logo-choice" data-logo-type="stacked"><span class="logo-preview"><img src="./assets/logos/stacked.svg" alt="" /></span><span>Stacked</span></button>
-            <button type="button" class="logo-choice" data-logo-type="lettermark"><span class="logo-preview"><img src="./assets/logos/lettermark.svg" alt="" /></span><span>Lettermark</span></button>
-          </div>
+          <div class="logo-picker" id="logoPicker"><button type="button" class="logo-choice active" data-logo-type="wordmark"><span class="logo-preview"><img src="./assets/logos/wordmark.svg" alt="" /></span><span>Wordmark</span></button><button type="button" class="logo-choice" data-logo-type="combination"><span class="logo-preview"><img src="./assets/logos/combination.svg" alt="" /></span><span>Combination</span></button><button type="button" class="logo-choice" data-logo-type="stacked"><span class="logo-preview"><img src="./assets/logos/stacked.svg" alt="" /></span><span>Stacked</span></button><button type="button" class="logo-choice" data-logo-type="lettermark"><span class="logo-preview"><img src="./assets/logos/lettermark.svg" alt="" /></span><span>Lettermark</span></button></div>
           <label>Custom SVG / image <input id="logoFile" type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp,.svg" /></label>
           <div class="two-col"><label>Logo width <div class="unit-field"><input id="logoSize" type="number" min="20" max="1400" step="5" value="220" /><span>px</span></div></label><label>Logo color <input id="logoColor" type="color" value="#ffffff" /></label></div>
         </section>
 
         <section class="tab-panel" data-panel="motion">
           <div class="section-heading"><h2>Motion</h2><span id="motionLayerLabel">Logo layer</span></div>
-          <div class="layer-segmented" role="group" aria-label="Motion layer"><button id="motionLayerLogo" type="button" class="active">Logo</button><button id="motionLayerText" type="button">Text</button></div>
-          <div class="preset-row"><button type="button" data-motion-preset="smooth">Smooth</button><button type="button" data-motion-preset="snappy">Snappy</button><button type="button" data-motion-preset="soft">Soft</button><button type="button" data-motion-preset="pop">Pop</button></div>
-          <label>Lifecycle<select id="flowMode"><option value="in-hold-out" selected>In → Hold → Out</option><option value="in-only">In only</option><option value="out-only">Out only</option><option value="in-out">In → Out</option><option value="in-stay">In → Stay</option><option value="static">Static</option></select></label>
-          <div class="two-col">
-            <label>Layer start <div class="unit-field"><input id="layerStart" type="number" min="0" max="10000" step="10" value="0" /><span>ms</span></div></label>
-            <label>Enter <div class="unit-field"><input id="enterDuration" type="number" min="0" max="5000" step="25" value="850" /><span>ms</span></div></label>
-            <label>Hold <div class="unit-field"><input id="holdDuration" type="number" min="0" max="10000" step="25" value="350" /><span>ms</span></div></label>
-            <label>Exit <div class="unit-field"><input id="exitDuration" type="number" min="0" max="5000" step="25" value="750" /><span>ms</span></div></label>
+          <div class="layer-identity"><div><span id="layerTypeBadge" class="type-badge">Logo</span><input id="layerName" type="text" value="Logo" aria-label="Layer name" /></div><button id="deleteLayerBtn" type="button" class="danger-button" hidden>Delete null</button></div>
+          <label>Parent<select id="parentLayer"><option value="">None</option></select></label>
+
+          <div id="lifecycleControls" class="inspector-section">
+            <div class="mini-heading"><strong>Lifecycle</strong><span>Convenience animation</span></div>
+            <div class="preset-row"><button type="button" data-motion-preset="smooth">Smooth</button><button type="button" data-motion-preset="snappy">Snappy</button><button type="button" data-motion-preset="soft">Soft</button><button type="button" data-motion-preset="pop">Pop</button></div>
+            <label>Mode<select id="flowMode"><option value="in-hold-out" selected>In → Hold → Out</option><option value="in-only">In only</option><option value="out-only">Out only</option><option value="in-out">In → Out</option><option value="in-stay">In → Stay</option><option value="static">Static</option></select></label>
+            <div class="two-col"><label>Layer start <div class="unit-field"><input id="layerStart" type="number" min="0" max="10000" step="10" value="0" /><span>ms</span></div></label><label>Enter <div class="unit-field"><input id="enterDuration" type="number" min="0" max="5000" step="25" value="850" /><span>ms</span></div></label><label>Hold <div class="unit-field"><input id="holdDuration" type="number" min="0" max="10000" step="25" value="350" /><span>ms</span></div></label><label>Exit <div class="unit-field"><input id="exitDuration" type="number" min="0" max="5000" step="25" value="750" /><span>ms</span></div></label><label>Enter direction<select id="enterDirection"><option value="from-bottom" selected>From bottom</option><option value="from-top">From top</option><option value="from-left">From left</option><option value="from-right">From right</option><option value="none">None</option></select></label><label>Exit direction<select id="exitDirection"><option value="to-top" selected>To top</option><option value="to-bottom">To bottom</option><option value="to-left">To left</option><option value="to-right">To right</option><option value="none">None</option></select></label><label>Travel <div class="unit-field"><input id="layerTravel" type="number" min="0" max="800" step="5" value="50" /><span>px</span></div></label><label>Start scale <div class="unit-field"><input id="layerScale" type="number" min="0" max="3" step="0.01" value="0.94" /><span>×</span></div></label></div>
+            <label id="staggerControl">Word stagger <input id="wordStagger" type="range" min="0" max="200" step="5" value="35" /><output id="wordStaggerOut">35 ms</output></label>
           </div>
-          <p class="hint">Each layer has its own independent Enter, Hold and Exit timing. Drag the phase boundaries directly in the timeline.</p>
-          <div class="two-col">
-            <label>Enter direction<select id="enterDirection"><option value="from-bottom" selected>From bottom</option><option value="from-top">From top</option><option value="from-left">From left</option><option value="from-right">From right</option><option value="none">None</option></select></label>
-            <label>Exit direction<select id="exitDirection"><option value="to-top" selected>To top</option><option value="to-bottom">To bottom</option><option value="to-left">To left</option><option value="to-right">To right</option><option value="none">None</option></select></label>
-            <label>Travel <div class="unit-field"><input id="layerTravel" type="number" min="0" max="800" step="5" value="50" /><span>px</span></div></label>
-            <label>Start scale <div class="unit-field"><input id="layerScale" type="number" min="0" max="3" step="0.01" value="0.94" /><span>×</span></div></label>
+
+          <div class="inspector-section position-card">
+            <div class="mini-heading"><strong>Position A → B</strong><label class="tiny-switch"><input id="positionEnabled" type="checkbox" /> Enabled</label></div>
+            <div class="two-col"><label>Start <div class="unit-field"><input id="positionStart" type="number" min="0" max="20000" step="10" value="0" /><span>ms</span></div></label><label>Duration <div class="unit-field"><input id="positionDuration" type="number" min="1" max="20000" step="10" value="850" /><span>ms</span></div></label></div>
+            <div class="keyframe-grid"><div class="keyframe-block"><span class="keyframe-label"><i></i>A</span><label>X <div class="unit-field"><input id="positionFromX" type="number" min="-5000" max="5000" step="1" value="0" /><span>px</span></div></label><label>Y <div class="unit-field"><input id="positionFromY" type="number" min="-5000" max="5000" step="1" value="0" /><span>px</span></div></label></div><div class="keyframe-arrow">→</div><div class="keyframe-block"><span class="keyframe-label"><i></i>B</span><label>X <div class="unit-field"><input id="positionToX" type="number" min="-5000" max="5000" step="1" value="0" /><span>px</span></div></label><label>Y <div class="unit-field"><input id="positionToY" type="number" min="-5000" max="5000" step="1" value="0" /><span>px</span></div></label></div></div>
+            <div class="position-actions"><button id="swapPositionBtn" type="button" class="secondary compact">Swap A / B</button><button id="zeroPositionBtn" type="button" class="secondary compact">Zero</button></div>
+            <p class="hint">Drag the blue A/B diamonds in the timeline to retime the position animation. Drag the line between them to move the whole clip.</p>
           </div>
-          <label id="staggerControl">Word stagger <input id="wordStagger" type="range" min="0" max="200" step="5" value="35" /><output id="wordStaggerOut">35 ms</output></label>
+
           <div class="curve-card">
-            <div class="group-title-row"><label>Curve<select id="curveTarget"><option value="enter" selected>Entrance</option><option value="exit">Exit</option></select></label><label>Preset<select id="curvePreset"><option value="custom">Custom</option><option value="fast">Fast Out</option><option value="expo">Expo Out</option><option value="smooth">Ease In Out</option><option value="back">Back</option><option value="snappy" selected>Snappy</option></select></label></div>
+            <div class="mini-heading"><strong>Curve library</strong><span>Reusable easing</span></div>
+            <div class="group-title-row"><label>Apply to<select id="curveTarget"><option value="position" selected>Position A → B</option><option value="enter">Entrance</option><option value="exit">Exit</option></select></label><label>Preset<select id="curvePreset"></select></label></div>
+            <div class="curve-save-row"><input id="curvePresetName" type="text" maxlength="32" placeholder="My curve name" /><button id="saveCurvePresetBtn" type="button" class="secondary compact">Save curve</button><button id="deleteCurvePresetBtn" type="button" class="icon-button small" title="Delete selected custom curve" disabled>×</button></div>
             <svg id="curveViz" viewBox="0 0 260 170" role="img" aria-label="Cubic Bézier curve editor"><path class="curve-grid" d="M20 20H240M20 63.3H240M20 106.6H240M20 150H240M20 20V150M93.3 20V150M166.6 20V150M240 20V150"/><path class="grid-line" d="M20 150H240M20 20V150"/><path class="guide" id="guide1"/><path class="guide" id="guide2"/><path class="curve" id="curvePath"/><circle class="curve-endpoint" cx="20" cy="150" r="3"/><circle class="curve-endpoint" cx="240" cy="63" r="3"/><circle class="handle" id="handle1" r="6" tabindex="0"/><circle class="handle" id="handle2" r="6" tabindex="0"/></svg>
             <div class="four-col"><label>x1 <input id="x1" type="number" min="0" max="1" step="0.01" value="0.05" /></label><label>y1 <input id="y1" type="number" min="-2" max="3" step="0.01" value="0.9" /></label><label>x2 <input id="x2" type="number" min="0" max="1" step="0.01" value="0.1" /></label><label>y2 <input id="y2" type="number" min="-2" max="3" step="0.01" value="1" /></label></div>
           </div>
