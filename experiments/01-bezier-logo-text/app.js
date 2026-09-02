@@ -171,35 +171,72 @@ function localTransformAt(layer, ms) {
   const e = cubicBezierEase(clamp((ms - start) / duration, 0, 1), ...p.curve);
   return interpolateTransform(p.from, p.to, e);
 }
+function parentPickupMs(layer) {
+  return layer?.parentStartMs == null ? null : Math.max(0, num(layer.parentStartMs, 0));
+}
 function worldMatrix(layerId, ms, seen = new Set()) {
   const layer = model.layers[layerId]; if (!layer || seen.has(layerId)) return [1,0,0,1,0,0];
   seen.add(layerId);
   const local = matFromTransform(localTransformAt(layer, ms));
   if (!layer.parentId || !model.layers[layer.parentId]) return local;
-  return matMul(worldMatrix(layer.parentId, ms, seen), local);
+  const pickup = parentPickupMs(layer);
+  if (pickup == null) return matMul(worldMatrix(layer.parentId, ms, new Set(seen)), local);
+  if (ms <= pickup) return local;
+  const parentNow = worldMatrix(layer.parentId, ms, new Set(seen));
+  const parentAtPickup = worldMatrix(layer.parentId, pickup, new Set(seen));
+  const parentDelta = matMul(parentNow, matInv(parentAtPickup));
+  return matMul(parentDelta, local);
 }
 function worldOpacity(layerId, ms, seen = new Set()) {
   const layer = model.layers[layerId]; if (!layer || seen.has(layerId)) return 1;
   seen.add(layerId);
   const own = localTransformAt(layer, ms).opacity;
-  return own * (layer.parentId && model.layers[layer.parentId] ? worldOpacity(layer.parentId, ms, seen) : 1);
+  if (!layer.parentId || !model.layers[layer.parentId]) return own;
+  const pickup = parentPickupMs(layer);
+  if (pickup == null) return own * worldOpacity(layer.parentId, ms, new Set(seen));
+  if (ms <= pickup) return own;
+  const parentNow = worldOpacity(layer.parentId, ms, new Set(seen));
+  const parentAtPickup = worldOpacity(layer.parentId, pickup, new Set(seen));
+  const parentFactor = parentAtPickup > 1e-6 ? parentNow / parentAtPickup : 1;
+  return own * parentFactor;
+}
+function parentInfluenceAt(layer, ms) {
+  if (!layer.parentId || !model.layers[layer.parentId]) return { matrix: [1,0,0,1,0,0], opacity: 1 };
+  const pickup = parentPickupMs(layer);
+  if (pickup == null) return { matrix: worldMatrix(layer.parentId, ms), opacity: worldOpacity(layer.parentId, ms) };
+  if (ms <= pickup) return { matrix: [1,0,0,1,0,0], opacity: 1 };
+  const parentNow = worldMatrix(layer.parentId, ms);
+  const parentAtPickup = worldMatrix(layer.parentId, pickup);
+  const opacityNow = worldOpacity(layer.parentId, ms);
+  const opacityAtPickup = worldOpacity(layer.parentId, pickup);
+  return {
+    matrix: matMul(parentNow, matInv(parentAtPickup)),
+    opacity: opacityAtPickup > 1e-6 ? opacityNow / opacityAtPickup : 1,
+  };
+}
+function bakeCurrentParentInfluence(layer, ms) {
+  const influence = parentInfluenceAt(layer, ms);
+  const bake = (value) => {
+    const baked = decompose(matMul(influence.matrix, matFromTransform(value)), clamp(value.opacity * influence.opacity, 0, 1));
+    return baked;
+  };
+  layer.base = bake(layer.base);
+  layer.transform.from = bake(layer.transform.from);
+  layer.transform.to = bake(layer.transform.to);
 }
 function reparentLayer(layerId, newParentId) {
   const layer = model.layers[layerId]; if (!layer) return;
-  const oldParentId = layer.parentId;
-  const points = [
-    { key: 'base', ms: 0, value: layer.base },
-    { key: 'from', ms: layer.transform.start, value: layer.transform.from },
-    { key: 'to', ms: layer.transform.start + layer.transform.duration, value: layer.transform.to },
-  ];
-  const oldWorlds = points.map(({ ms, value }) => matMul(oldParentId && model.layers[oldParentId] ? worldMatrix(oldParentId, ms) : [1,0,0,1,0,0], matFromTransform(value)));
-  layer.parentId = newParentId || null;
-  points.forEach((point, i) => {
-    const newParent = newParentId && model.layers[newParentId] ? worldMatrix(newParentId, point.ms) : [1,0,0,1,0,0];
-    const local = matMul(matInv(newParent), oldWorlds[i]);
-    const next = decompose(local, point.value.opacity);
-    if (point.key === 'base') layer.base = next; else layer.transform[point.key] = next;
-  });
+  const nextParentId = newParentId || null;
+  if (nextParentId === layer.parentId) return;
+  const rawPickup = playhead * durationMs();
+  const pickup = Math.max(0, model.snap ? snapMs(rawPickup) : rawPickup);
+  if (layer.parentId && model.layers[layer.parentId]) bakeCurrentParentInfluence(layer, pickup);
+  layer.parentId = null;
+  layer.parentStartMs = null;
+  if (nextParentId && model.layers[nextParentId]) {
+    layer.parentId = nextParentId;
+    layer.parentStartMs = pickup;
+  }
 }
 function wouldCreateCycle(layerId, parentId) {
   let cur = parentId, guard = 0;
@@ -314,7 +351,7 @@ function renderFrame(t, targetCtx = ctx, width = canvas.width, height = canvas.h
 
 function normalizeLayer(layer, modelRef) {
   const base = transform(modelRef.canvasWidth/2,modelRef.canvasHeight/2,1,0,1);
-  const out = { ...layer, parentId: layer.parentId || null, base: { ...base, ...(layer.base||{}) } };
+  const out = { ...layer, parentId: layer.parentId || null, parentStartMs: layer.parentStartMs == null ? null : Math.max(0, num(layer.parentStartMs, 0)), base: { ...base, ...(layer.base||{}) } };
   out.reveal = { ...revealDefaults(layer.type), ...(layer.reveal||{}) };
   out.transform = { ...transformClip(out.base,false), ...(layer.transform||{}), from:{...out.base,...(layer.transform?.from||{})},to:{...out.base,...(layer.transform?.to||{})},curve:Array.isArray(layer.transform?.curve)?layer.transform.curve.map(Number):[...BUILTIN_CURVES.snappy.curve] };
   if (layer.type==='text') out.content={text:'NEW TEXT',fontFamily:'Anton',fontSize:52,fontWeight:400,letterSpacing:2,color:'#fff',align:'center',maxWidth:Math.round(modelRef.canvasWidth*.8),autoFit:true,...(layer.content||{})};
@@ -356,7 +393,7 @@ function updateTimelinePlayhead(){const track=document.querySelector('.timing-tr
 function syncTimeUI(){const total=durationMs();$('timeReadout').textContent=`${(playhead*total/1000).toFixed(2)} s`;$('totalTimeReadout').textContent=`${(total/1000).toFixed(2)} s`;$('frameEstimate').textContent=String(Math.max(2,Math.min(360,Math.round(total/1000*model.fps))));$('outputSizeReadout').textContent=`${Math.round(model.canvasWidth*model.exportScale)} × ${Math.round(model.canvasHeight*model.exportScale)}`;}
 
 function parentOptions(layer){const options=['<option value="">None</option>'];layerIds().forEach(id=>{const candidate=model.layers[id];if(candidate.type!=='null'||id===layer.id||wouldCreateCycle(layer.id,id))return;options.push(`<option value="${id}">${escapeHtml(candidate.name)}</option>`);});return options.join('');}
-function syncLayerInspector(){const l=selectedLayer();if(!l)return;$('layerName').value=l.name;$('layerTypeBadge').textContent=l.type;$('layerTypeBadge').className=`type-badge ${l.type}`;$('deleteLayerBtn').disabled=layerIds().length<=1;$('parentLayer').innerHTML=parentOptions(l);$('parentLayer').value=l.parentId||'';
+function syncLayerInspector(){const l=selectedLayer();if(!l)return;$('layerName').value=l.name;$('layerTypeBadge').textContent=l.type;$('layerTypeBadge').className=`type-badge ${l.type}`;$('deleteLayerBtn').disabled=layerIds().length<=1;$('parentLayer').innerHTML=parentOptions(l);$('parentLayer').value=l.parentId||'';const parentHint=$('parentPickupHint');if(parentHint){const pickup=parentPickupMs(l);parentHint.hidden=!l.parentId;parentHint.textContent=!l.parentId?'':pickup==null?'Legacy parent relation. Reassign the parent at the desired timeline position to use pickup behavior.':`Follows ${model.layers[l.parentId]?.name||'parent'} from ${formatTime(pickup)}. Before that time this layer stays independent.`;}
   ['baseX','baseY','baseScale','baseRotation','baseOpacity'].forEach(id=>$(id).disabled=l.transform.enabled);
   $('baseX').value=Math.round(l.base.x*100)/100;$('baseY').value=Math.round(l.base.y*100)/100;$('baseScale').value=l.base.scale;$('baseRotation').value=l.base.rotation;$('baseOpacity').value=l.base.opacity;
   $('textControls').hidden=l.type!=='text';$('imageControls').hidden=l.type!=='image';$('nullHint').hidden=l.type!=='null';
@@ -419,10 +456,51 @@ function setupCurveBindings(){
   const update=()=>{setCurrentCurve([clamp(num($('x1').value),0,1),num($('y1').value,.9),clamp(num($('x2').value),0,1),num($('y2').value,1)]);syncCurveUI();renderFrame(playhead);scheduleSave();};['x1','y1','x2','y2'].forEach(id=>{$(id).addEventListener('input',update);$(id).addEventListener('change',()=>{update();commitHistory();});});
   const toPoint=e=>{const m=$('curveViz').getScreenCTM();if(!m)return null;const pt=$('curveViz').createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;return pt.matrixTransform(m.inverse());};const begin=(which,e)=>{activeDrag={kind:'curve',which};e.target.setPointerCapture?.(e.pointerId);e.preventDefault();};$('handle1').addEventListener('pointerdown',e=>begin(1,e));$('handle2').addEventListener('pointerdown',e=>begin(2,e));$('curveViz').addEventListener('pointermove',e=>{if(activeDrag?.kind!=='curve')return;const p=toPoint(e);if(!p)return;const curve=[...currentCurve()],x=clamp((p.x-20)/220,0,1),y=clamp(((150-p.y)/130)*1.5-.25,-2,3);curve[activeDrag.which===1?0:2]=Number(x.toFixed(2));curve[activeDrag.which===1?1:3]=Number(y.toFixed(2));setCurrentCurve(curve);syncCurveUI();renderFrame(playhead);scheduleSave();});const end=()=>{if(activeDrag?.kind==='curve'){activeDrag=null;commitHistory();}};$('curveViz').addEventListener('pointerup',end);$('curveViz').addEventListener('pointercancel',end);
 }
+function timelineTrackRect(){const track=document.querySelector('.timing-track');return track?.getBoundingClientRect()||null;}
+function beginTimelineScrub(e,rect=timelineTrackRect()){
+  if(!rect)return;
+  pause();
+  activeDrag={kind:'scrub',rect,total:durationMs(),pointerId:e.pointerId};
+  document.body.classList.add('timeline-interacting');
+  window.getSelection?.()?.removeAllRanges?.();
+  try{e.currentTarget?.setPointerCapture?.(e.pointerId);}catch{}
+  playhead=clamp((e.clientX-rect.left)/Math.max(1,rect.width),0,1);
+  syncPlayhead();
+  e.preventDefault();
+}
+function endTimelinePointerDrag(){
+  if(!activeDrag||activeDrag.kind==='curve')return;
+  const shouldCommit=activeDrag.kind!=='scrub';
+  activeDrag=null;
+  document.body.classList.remove('timeline-interacting');
+  if(shouldCommit)commitHistory();
+}
 function setupTimeline(){
   $('layerTree').addEventListener('click',e=>{const row=e.target.closest('[data-layer-select]');if(row)selectLayer(row.dataset.layerSelect,true);});
-  $('timeline').addEventListener('pointerdown',e=>{const track=e.target.closest('.timing-track');if(!track)return;const id=track.dataset.track,l=model.layers[id],rect=track.getBoundingClientRect(),total=durationMs(),tclip=e.target.closest('.transform-clip'),rbar=e.target.closest('.reveal-bar'),tedge=e.target.closest('[data-transform-edge]'),redge=e.target.closest('[data-reveal-edge]');selectLayer(id,false);if(tclip){const p=l.transform;activeDrag={kind:tedge?`transform-${tedge.dataset.transformEdge}`:'transform-bar',id,rect,total,x0:e.clientX,start0:p.start,duration0:p.duration,end0:p.start+p.duration};}else if(rbar){const r=l.reveal;activeDrag={kind:redge?`reveal-${redge.dataset.revealEdge}`:'reveal-bar',id,rect,total,x0:e.clientX,start0:r.start,enter0:r.enter,hold0:r.hold,exit0:r.exit};}else{activeDrag={kind:'scrub',id,rect,total};pause();playhead=clamp((e.clientX-rect.left)/rect.width,0,1);syncPlayhead();}e.preventDefault();});
-  window.addEventListener('pointermove',e=>{if(!activeDrag||activeDrag.kind==='curve')return;const a=activeDrag,l=model.layers[a.id];if(!l)return;if(a.kind==='scrub'){playhead=clamp((e.clientX-a.rect.left)/a.rect.width,0,1);syncPlayhead();return;}const dx=(e.clientX-a.x0)/Math.max(1,a.rect.width)*a.total;
+  $('timeline').addEventListener('pointerdown',e=>{
+    if(e.target.closest('.timeline-playhead')){beginTimelineScrub(e);return;}
+    const track=e.target.closest('.timing-track');if(!track)return;
+    const id=track.dataset.track,l=model.layers[id],rect=track.getBoundingClientRect(),total=durationMs(),tclip=e.target.closest('.transform-clip'),rbar=e.target.closest('.reveal-bar'),tedge=e.target.closest('[data-transform-edge]'),redge=e.target.closest('[data-reveal-edge]');
+    if(!tclip&&!rbar){beginTimelineScrub(e,rect);return;}
+    selectLayer(id,false);
+    document.body.classList.add('timeline-interacting');
+    window.getSelection?.()?.removeAllRanges?.();
+    if(tclip){const p=l.transform;activeDrag={kind:tedge?`transform-${tedge.dataset.transformEdge}`:'transform-bar',id,rect,total,x0:e.clientX,start0:p.start,duration0:p.duration,end0:p.start+p.duration};}
+    else{const r=l.reveal;activeDrag={kind:redge?`reveal-${redge.dataset.revealEdge}`:'reveal-bar',id,rect,total,x0:e.clientX,start0:r.start,enter0:r.enter,hold0:r.hold,exit0:r.exit};}
+    e.preventDefault();
+  });
+  window.addEventListener('pointermove',e=>{
+    if(!activeDrag||activeDrag.kind==='curve')return;
+    const a=activeDrag;
+    if(a.kind==='scrub'){
+      e.preventDefault();
+      window.getSelection?.()?.removeAllRanges?.();
+      playhead=clamp((e.clientX-a.rect.left)/Math.max(1,a.rect.width),0,1);
+      syncPlayhead();
+      return;
+    }
+    const l=model.layers[a.id];if(!l)return;
+    const dx=(e.clientX-a.x0)/Math.max(1,a.rect.width)*a.total;
     if(a.kind==='transform-a'){const end=a.end0,newStart=clamp(snapMs(a.start0+dx),0,Math.max(0,end-frameMs()));l.transform.start=newStart;l.transform.duration=end-newStart;}
     else if(a.kind==='transform-b'){l.transform.duration=Math.max(frameMs(),snapMs(a.duration0+dx));}
     else if(a.kind==='transform-bar'){l.transform.start=Math.max(0,snapMs(a.start0+dx));}
@@ -430,9 +508,11 @@ function setupTimeline(){
     else if(a.kind==='reveal-enter'){const total=a.enter0+a.hold0+a.exit0,b=clamp(snapMs(a.enter0+dx),0,Math.max(0,total-a.exit0));l.reveal.enter=b;l.reveal.hold=Math.max(0,total-b-a.exit0);}
     else if(a.kind==='reveal-hold'){const total=a.enter0+a.hold0+a.exit0,b=clamp(snapMs(a.enter0+a.hold0+dx),a.enter0,total);l.reveal.hold=Math.max(0,b-a.enter0);l.reveal.exit=Math.max(0,total-a.enter0-l.reveal.hold);}
     else if(a.kind==='reveal-end'){l.reveal.exit=Math.max(0,snapMs(a.exit0+dx));}
-    syncMotionInspector();syncTimeline();syncPlayhead();scheduleSave();});
-  window.addEventListener('pointerup',()=>{if(activeDrag&&activeDrag.kind!=='curve'){const scrub=activeDrag.kind==='scrub';activeDrag=null;if(!scrub)commitHistory();}});
-  $('timelineRuler').addEventListener('pointerdown',e=>{const track=document.querySelector('.timing-track');if(!track)return;const rect=track.getBoundingClientRect();pause();playhead=clamp((e.clientX-rect.left)/rect.width,0,1);syncPlayhead();});
+    syncMotionInspector();syncTimeline();syncPlayhead();scheduleSave();
+  },{passive:false});
+  window.addEventListener('pointerup',endTimelinePointerDrag);
+  window.addEventListener('pointercancel',endTimelinePointerDrag);
+  $('timelineRuler').addEventListener('pointerdown',e=>beginTimelineScrub(e));
 }
 function setupCanvasBindings(){
   $('canvasPreset').addEventListener('change',()=>{const p=CANVAS_PRESETS[$('canvasPreset').value];if(!p)return;const sx=p[0]/model.canvasWidth,sy=p[1]/model.canvasHeight;Object.values(model.layers).forEach(l=>{l.base.x*=sx;l.base.y*=sy;l.transform.from.x*=sx;l.transform.from.y*=sy;l.transform.to.x*=sx;l.transform.to.y*=sy;if(l.type==='text')l.content.maxWidth*=sx;});model.canvasWidth=p[0];model.canvasHeight=p[1];syncAll();commitHistory();});
