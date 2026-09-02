@@ -34,14 +34,20 @@
   function loadEnhancements() {
     if (enhancementsLoaded) return;
     enhancementsLoaded = true;
-    const css = document.createElement('link');
-    css.rel = 'stylesheet';
-    css.href = './enhancements.css?v=6.3.0';
-    document.head.appendChild(css);
-    const script = document.createElement('script');
-    script.type = 'module';
-    script.src = './enhancements.js?v=6.3.0';
-    document.body.appendChild(script);
+
+    for (const href of ['./enhancements.css?v=6.3.0', './mobile-timeline.css?v=6.4.0']) {
+      const css = document.createElement('link');
+      css.rel = 'stylesheet';
+      css.href = href;
+      document.head.appendChild(css);
+    }
+
+    for (const src of ['./enhancements.js?v=6.3.0', './mobile-timeline.js?v=6.4.0']) {
+      const script = document.createElement('script');
+      script.type = 'module';
+      script.src = src;
+      document.body.appendChild(script);
+    }
   }
 
   function showRecoveryMessage() {
