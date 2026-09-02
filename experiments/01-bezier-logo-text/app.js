@@ -171,55 +171,54 @@ function localTransformAt(layer, ms) {
   const e = cubicBezierEase(clamp((ms - start) / duration, 0, 1), ...p.curve);
   return interpolateTransform(p.from, p.to, e);
 }
-function parentPickupMs(layer) {
-  return layer?.parentStartMs == null ? null : Math.max(0, num(layer.parentStartMs, 0));
+function parentBindMs(layer) {
+  return layer?.parentBindMs == null ? null : Math.max(0, num(layer.parentBindMs, 0));
 }
 function worldMatrix(layerId, ms, seen = new Set()) {
   const layer = model.layers[layerId]; if (!layer || seen.has(layerId)) return [1,0,0,1,0,0];
   seen.add(layerId);
   const local = matFromTransform(localTransformAt(layer, ms));
   if (!layer.parentId || !model.layers[layer.parentId]) return local;
-  const pickup = parentPickupMs(layer);
-  if (pickup == null) return matMul(worldMatrix(layer.parentId, ms, new Set(seen)), local);
-  if (ms <= pickup) return local;
+  const bind = parentBindMs(layer);
+  // Legacy parent relationships without a bind frame keep their old direct-parent behavior.
+  if (bind == null) return matMul(worldMatrix(layer.parentId, ms, new Set(seen)), local);
+  // AE-style bind pose: the relationship is active across the whole timeline, but the
+  // parent's transform at the frame where parenting happened is treated as identity.
   const parentNow = worldMatrix(layer.parentId, ms, new Set(seen));
-  const parentAtPickup = worldMatrix(layer.parentId, pickup, new Set(seen));
-  const parentDelta = matMul(parentNow, matInv(parentAtPickup));
-  return matMul(parentDelta, local);
+  const parentAtBind = worldMatrix(layer.parentId, bind, new Set(seen));
+  return matMul(matMul(parentNow, matInv(parentAtBind)), local);
 }
 function worldOpacity(layerId, ms, seen = new Set()) {
   const layer = model.layers[layerId]; if (!layer || seen.has(layerId)) return 1;
   seen.add(layerId);
   const own = localTransformAt(layer, ms).opacity;
   if (!layer.parentId || !model.layers[layer.parentId]) return own;
-  const pickup = parentPickupMs(layer);
-  if (pickup == null) return own * worldOpacity(layer.parentId, ms, new Set(seen));
-  if (ms <= pickup) return own;
+  const bind = parentBindMs(layer);
+  if (bind == null) return own * worldOpacity(layer.parentId, ms, new Set(seen));
   const parentNow = worldOpacity(layer.parentId, ms, new Set(seen));
-  const parentAtPickup = worldOpacity(layer.parentId, pickup, new Set(seen));
-  const parentFactor = parentAtPickup > 1e-6 ? parentNow / parentAtPickup : 1;
+  const parentAtBind = worldOpacity(layer.parentId, bind, new Set(seen));
+  const parentFactor = parentAtBind > 1e-6 ? parentNow / parentAtBind : 1;
   return own * parentFactor;
 }
 function parentInfluenceAt(layer, ms) {
   if (!layer.parentId || !model.layers[layer.parentId]) return { matrix: [1,0,0,1,0,0], opacity: 1 };
-  const pickup = parentPickupMs(layer);
-  if (pickup == null) return { matrix: worldMatrix(layer.parentId, ms), opacity: worldOpacity(layer.parentId, ms) };
-  if (ms <= pickup) return { matrix: [1,0,0,1,0,0], opacity: 1 };
+  const bind = parentBindMs(layer);
+  if (bind == null) return { matrix: worldMatrix(layer.parentId, ms), opacity: worldOpacity(layer.parentId, ms) };
   const parentNow = worldMatrix(layer.parentId, ms);
-  const parentAtPickup = worldMatrix(layer.parentId, pickup);
+  const parentAtBind = worldMatrix(layer.parentId, bind);
   const opacityNow = worldOpacity(layer.parentId, ms);
-  const opacityAtPickup = worldOpacity(layer.parentId, pickup);
+  const opacityAtBind = worldOpacity(layer.parentId, bind);
   return {
-    matrix: matMul(parentNow, matInv(parentAtPickup)),
-    opacity: opacityAtPickup > 1e-6 ? opacityNow / opacityAtPickup : 1,
+    matrix: matMul(parentNow, matInv(parentAtBind)),
+    opacity: opacityAtBind > 1e-6 ? opacityNow / opacityAtBind : 1,
   };
 }
 function bakeCurrentParentInfluence(layer, ms) {
   const influence = parentInfluenceAt(layer, ms);
-  const bake = (value) => {
-    const baked = decompose(matMul(influence.matrix, matFromTransform(value)), clamp(value.opacity * influence.opacity, 0, 1));
-    return baked;
-  };
+  const bake = (value) => decompose(
+    matMul(influence.matrix, matFromTransform(value)),
+    clamp(value.opacity * influence.opacity, 0, 1)
+  );
   layer.base = bake(layer.base);
   layer.transform.from = bake(layer.transform.from);
   layer.transform.to = bake(layer.transform.to);
@@ -228,14 +227,16 @@ function reparentLayer(layerId, newParentId) {
   const layer = model.layers[layerId]; if (!layer) return;
   const nextParentId = newParentId || null;
   if (nextParentId === layer.parentId) return;
-  const rawPickup = playhead * durationMs();
-  const pickup = Math.max(0, model.snap ? snapMs(rawPickup) : rawPickup);
-  if (layer.parentId && model.layers[layer.parentId]) bakeCurrentParentInfluence(layer, pickup);
+  const rawBind = playhead * durationMs();
+  const bind = Math.max(0, model.snap ? snapMs(rawBind) : rawBind);
+  // If changing/removing an existing parent, first bake its current influence into the
+  // child's own transform values so the child does not jump on this frame.
+  if (layer.parentId && model.layers[layer.parentId]) bakeCurrentParentInfluence(layer, bind);
   layer.parentId = null;
-  layer.parentStartMs = null;
+  layer.parentBindMs = null;
   if (nextParentId && model.layers[nextParentId]) {
     layer.parentId = nextParentId;
-    layer.parentStartMs = pickup;
+    layer.parentBindMs = bind;
   }
 }
 function wouldCreateCycle(layerId, parentId) {
@@ -351,7 +352,7 @@ function renderFrame(t, targetCtx = ctx, width = canvas.width, height = canvas.h
 
 function normalizeLayer(layer, modelRef) {
   const base = transform(modelRef.canvasWidth/2,modelRef.canvasHeight/2,1,0,1);
-  const out = { ...layer, parentId: layer.parentId || null, parentStartMs: layer.parentStartMs == null ? null : Math.max(0, num(layer.parentStartMs, 0)), base: { ...base, ...(layer.base||{}) } };
+  const bindMs = layer.parentBindMs ?? layer.parentStartMs ?? null; const out = { ...layer, parentId: layer.parentId || null, parentBindMs: bindMs == null ? null : Math.max(0, num(bindMs, 0)), base: { ...base, ...(layer.base||{}) } }; delete out.parentStartMs;
   out.reveal = { ...revealDefaults(layer.type), ...(layer.reveal||{}) };
   out.transform = { ...transformClip(out.base,false), ...(layer.transform||{}), from:{...out.base,...(layer.transform?.from||{})},to:{...out.base,...(layer.transform?.to||{})},curve:Array.isArray(layer.transform?.curve)?layer.transform.curve.map(Number):[...BUILTIN_CURVES.snappy.curve] };
   if (layer.type==='text') out.content={text:'NEW TEXT',fontFamily:'Anton',fontSize:52,fontWeight:400,letterSpacing:2,color:'#fff',align:'center',maxWidth:Math.round(modelRef.canvasWidth*.8),autoFit:true,...(layer.content||{})};
@@ -393,7 +394,7 @@ function updateTimelinePlayhead(){const track=document.querySelector('.timing-tr
 function syncTimeUI(){const total=durationMs();$('timeReadout').textContent=`${(playhead*total/1000).toFixed(2)} s`;$('totalTimeReadout').textContent=`${(total/1000).toFixed(2)} s`;$('frameEstimate').textContent=String(Math.max(2,Math.min(360,Math.round(total/1000*model.fps))));$('outputSizeReadout').textContent=`${Math.round(model.canvasWidth*model.exportScale)} × ${Math.round(model.canvasHeight*model.exportScale)}`;}
 
 function parentOptions(layer){const options=['<option value="">None</option>'];layerIds().forEach(id=>{const candidate=model.layers[id];if(candidate.type!=='null'||id===layer.id||wouldCreateCycle(layer.id,id))return;options.push(`<option value="${id}">${escapeHtml(candidate.name)}</option>`);});return options.join('');}
-function syncLayerInspector(){const l=selectedLayer();if(!l)return;$('layerName').value=l.name;$('layerTypeBadge').textContent=l.type;$('layerTypeBadge').className=`type-badge ${l.type}`;$('deleteLayerBtn').disabled=layerIds().length<=1;$('parentLayer').innerHTML=parentOptions(l);$('parentLayer').value=l.parentId||'';const parentHint=$('parentPickupHint');if(parentHint){const pickup=parentPickupMs(l);parentHint.hidden=!l.parentId;parentHint.textContent=!l.parentId?'':pickup==null?'Legacy parent relation. Reassign the parent at the desired timeline position to use pickup behavior.':`Follows ${model.layers[l.parentId]?.name||'parent'} from ${formatTime(pickup)}. Before that time this layer stays independent.`;}
+function syncLayerInspector(){const l=selectedLayer();if(!l)return;$('layerName').value=l.name;$('layerTypeBadge').textContent=l.type;$('layerTypeBadge').className=`type-badge ${l.type}`;$('deleteLayerBtn').disabled=layerIds().length<=1;$('parentLayer').innerHTML=parentOptions(l);$('parentLayer').value=l.parentId||'';const parentHint=$('parentPickupHint');if(parentHint){const pickup=parentBindMs(l);parentHint.hidden=!l.parentId;parentHint.textContent=!l.parentId?'':pickup==null?'Legacy parent relation. Reassign the parent at the desired timeline position to create a bind pose.':`Bound to ${model.layers[l.parentId]?.name||'parent'} at ${formatTime(pickup)}. That frame is the reference pose; parenting applies across the full timeline.`;}
   ['baseX','baseY','baseScale','baseRotation','baseOpacity'].forEach(id=>$(id).disabled=l.transform.enabled);
   $('baseX').value=Math.round(l.base.x*100)/100;$('baseY').value=Math.round(l.base.y*100)/100;$('baseScale').value=l.base.scale;$('baseRotation').value=l.base.rotation;$('baseOpacity').value=l.base.opacity;
   $('textControls').hidden=l.type!=='text';$('imageControls').hidden=l.type!=='image';$('nullHint').hidden=l.type!=='null';
