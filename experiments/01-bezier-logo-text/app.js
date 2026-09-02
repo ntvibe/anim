@@ -33,6 +33,17 @@ const REVEAL_PRESETS = {
   pop: { enter: 600, hold: 450, exit: 550, travel: 30, scaleFrom: .82, enterCurve: 'back', exitCurve: 'fast' },
 };
 
+const ALIGN_POINTS = {
+  tl: [0, 0], tc: [.5, 0], tr: [1, 0],
+  cl: [0, .5], cc: [.5, .5], cr: [1, .5],
+  bl: [0, 1], bc: [.5, 1], br: [1, 1],
+};
+const ALIGN_NAMES = {
+  tl: 'Top left', tc: 'Top center', tr: 'Top right',
+  cl: 'Center left', cc: 'Center', cr: 'Center right',
+  bl: 'Bottom left', bc: 'Bottom center', br: 'Bottom right',
+};
+
 const clone = (v) => JSON.parse(JSON.stringify(v));
 const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -56,10 +67,13 @@ function revealDefaults(type) {
     enterBezier: [...BUILTIN_CURVES.snappy.curve], exitBezier: [0.85, 0, 1, 0.2],
   };
 }
+function alignmentDefaults() {
+  return { reference: 'bounds', anchor: 'cc', target: 'canvas' };
+}
 function textLayer(id, index, model) {
   const base = transform(model.canvasWidth / 2, model.canvasHeight / 2 + 50, 1, 0, 1);
   return {
-    id, type: 'text', name: `Text ${index}`, parentId: null, base,
+    id, type: 'text', name: `Text ${index}`, parentId: null, base, alignment: alignmentDefaults(),
     content: { text: index === 1 ? 'MORGEN MACHT MAN HEUTE.' : 'NEW TEXT', fontFamily: 'Anton', fontSize: 52, fontWeight: 400, letterSpacing: 2, color: '#ffffff', align: 'center', maxWidth: Math.round(model.canvasWidth * .8), autoFit: true },
     reveal: revealDefaults('text'), transform: transformClip(base, false),
   };
@@ -67,14 +81,14 @@ function textLayer(id, index, model) {
 function imageLayer(id, index, model) {
   const base = transform(model.canvasWidth / 2, model.canvasHeight / 2 - 42, 1, 0, 1);
   return {
-    id, type: 'image', name: index === 1 ? 'Logo' : `Image ${index}`, parentId: null, base,
+    id, type: 'image', name: index === 1 ? 'Logo' : `Image ${index}`, parentId: null, base, alignment: alignmentDefaults(),
     content: { assetKind: 'wordmark', src: BUILTIN_ASSETS.wordmark, width: 220, tint: '#ffffff', fileName: '' },
     reveal: revealDefaults('image'), transform: transformClip(base, false),
   };
 }
 function nullLayer(id, index, model) {
   const base = transform(model.canvasWidth / 2, model.canvasHeight / 2, 1, 0, 1);
-  return { id, type: 'null', name: `Null ${index}`, parentId: null, base, reveal: revealDefaults('null'), transform: transformClip(base, true) };
+  return { id, type: 'null', name: `Null ${index}`, parentId: null, base, alignment: alignmentDefaults(), reveal: revealDefaults('null'), transform: transformClip(base, true) };
 }
 function defaultModel() {
   const model = {
@@ -317,6 +331,91 @@ function fittedFontSize(context, layer) {
   while (size > 8) { context.font = `${c.fontWeight} ${size}px "${c.fontFamily}", sans-serif`; if (textWidth(context, c.text, c.letterSpacing) <= c.maxWidth) break; size -= 1; }
   return size;
 }
+function alignmentState(layer) {
+  if (!layer.alignment) layer.alignment = alignmentDefaults();
+  if (!ALIGN_POINTS[layer.alignment.anchor]) layer.alignment.anchor = 'cc';
+  if (!['bounds','anchor'].includes(layer.alignment.reference)) layer.alignment.reference = 'bounds';
+  if (!['canvas','safe'].includes(layer.alignment.target)) layer.alignment.target = 'canvas';
+  return layer.alignment;
+}
+function matrixPoint(matrix, x, y) {
+  return { x: matrix[0] * x + matrix[2] * y + matrix[4], y: matrix[1] * x + matrix[3] * y + matrix[5] };
+}
+function localVisualBounds(layer) {
+  if (layer.type === 'text') {
+    const c = layer.content;
+    ctx.save();
+    const size = fittedFontSize(ctx, layer);
+    ctx.font = `${c.fontWeight} ${size}px "${c.fontFamily}", sans-serif`;
+    const width = Math.max(1, textWidth(ctx, c.text || ' ', c.letterSpacing));
+    const metrics = ctx.measureText(c.text || 'M');
+    const metricHeight = (metrics.actualBoundingBoxAscent || size * .76) + (metrics.actualBoundingBoxDescent || size * .24);
+    const height = Math.max(1, metricHeight, size);
+    ctx.restore();
+    return { left: -width / 2, top: -height / 2, right: width / 2, bottom: height / 2 };
+  }
+  if (layer.type === 'image') {
+    const image = imageCache.get(layer.id)?.image;
+    const width = Math.max(1, num(layer.content.width, 1));
+    const ratio = image?.naturalWidth ? image.naturalHeight / image.naturalWidth : 1;
+    const height = Math.max(1, width * ratio);
+    return { left: -width / 2, top: -height / 2, right: width / 2, bottom: height / 2 };
+  }
+  return { left: 0, top: 0, right: 0, bottom: 0 };
+}
+function pointInBounds(bounds, key) {
+  const [u, v] = ALIGN_POINTS[key] || ALIGN_POINTS.cc;
+  return { x: lerp(bounds.left, bounds.right, u), y: lerp(bounds.top, bounds.bottom, v) };
+}
+function worldBounds(layer, ms) {
+  const matrix = worldMatrix(layer.id, ms);
+  const b = localVisualBounds(layer);
+  const corners = [
+    matrixPoint(matrix, b.left, b.top), matrixPoint(matrix, b.right, b.top),
+    matrixPoint(matrix, b.right, b.bottom), matrixPoint(matrix, b.left, b.bottom),
+  ];
+  const xs = corners.map((p) => p.x), ys = corners.map((p) => p.y);
+  return { left: Math.min(...xs), top: Math.min(...ys), right: Math.max(...xs), bottom: Math.max(...ys) };
+}
+function worldAlignmentAnchor(layer, ms) {
+  const anchor = alignmentState(layer).anchor;
+  const local = pointInBounds(localVisualBounds(layer), anchor);
+  return matrixPoint(worldMatrix(layer.id, ms), local.x, local.y);
+}
+function alignmentSourcePoint(layer, pointKey, ms) {
+  const a = alignmentState(layer);
+  return a.reference === 'anchor' ? worldAlignmentAnchor(layer, ms) : pointInBounds(worldBounds(layer, ms), pointKey);
+}
+function alignmentTargetPoint(pointKey, target) {
+  const safe = target === 'safe';
+  const bounds = safe
+    ? { left: model.marginX, top: model.marginY, right: model.canvasWidth - model.marginX, bottom: model.canvasHeight - model.marginY }
+    : { left: 0, top: 0, right: model.canvasWidth, bottom: model.canvasHeight };
+  return pointInBounds(bounds, pointKey);
+}
+function shiftLayerWorld(layer, dx, dy, ms) {
+  const influence = parentInfluenceAt(layer, ms).matrix;
+  const inv = matInv(influence);
+  const localDx = inv[0] * dx + inv[2] * dy;
+  const localDy = inv[1] * dx + inv[3] * dy;
+  [layer.base, layer.transform.from, layer.transform.to].forEach((value) => {
+    value.x += localDx;
+    value.y += localDy;
+  });
+}
+async function alignSelectedLayer(pointKey) {
+  const layer = selectedLayer();
+  if (!layer || !ALIGN_POINTS[pointKey]) return;
+  if (layer.type === 'image') await ensureImage(layer);
+  const ms = playhead * durationMs();
+  const a = alignmentState(layer);
+  const source = alignmentSourcePoint(layer, pointKey, ms);
+  const target = alignmentTargetPoint(pointKey, a.target);
+  shiftLayerWorld(layer, target.x - source.x, target.y - source.y, ms);
+  syncAll();
+  commitHistory();
+  scheduleSave();
+}
 async function ensureFont(layer) {
   if (layer.type !== 'text') return;
   const family = layer.content.fontFamily.trim() || 'Anton';
@@ -363,15 +462,29 @@ function drawGuides(context) {
 function drawSelectedNull(context, ms) {
   const layer=selectedLayer(); if (!layer || layer.type!=='null') return; const m=worldMatrix(layer.id,ms); const x=m[4],y=m[5];context.save();context.translate(x,y);context.strokeStyle='rgba(47,120,255,.9)';context.lineWidth=1.5;context.beginPath();context.moveTo(-10,0);context.lineTo(10,0);context.moveTo(0,-10);context.lineTo(0,10);context.stroke();context.strokeRect(-4,-4,8,8);context.restore();
 }
+function drawSelectedAlignmentAnchor(context, ms) {
+  const layer = selectedLayer();
+  if (!layer || layer.type === 'null') return;
+  const p = worldAlignmentAnchor(layer, ms);
+  context.save();
+  context.translate(p.x, p.y);
+  context.strokeStyle = 'rgba(47,120,255,.95)';
+  context.fillStyle = 'rgba(255,255,255,.96)';
+  context.lineWidth = 1.5;
+  context.beginPath(); context.arc(0, 0, 5, 0, Math.PI * 2); context.fill(); context.stroke();
+  context.beginPath(); context.moveTo(-9, 0); context.lineTo(-5, 0); context.moveTo(5, 0); context.lineTo(9, 0); context.moveTo(0, -9); context.lineTo(0, -5); context.moveTo(0, 5); context.lineTo(0, 9); context.stroke();
+  context.restore();
+}
 function renderFrame(t, targetCtx = ctx, width = canvas.width, height = canvas.height, options = {}) {
   const ms = clamp(t,0,1)*durationMs(); targetCtx.save();targetCtx.clearRect(0,0,width,height);targetCtx.scale(width/model.canvasWidth,height/model.canvasHeight);targetCtx.fillStyle=model.bgColor;targetCtx.fillRect(0,0,model.canvasWidth,model.canvasHeight);
   layerIds().forEach((id)=>{const layer=model.layers[id];if(layer.type==='image')drawImageLayer(targetCtx,layer,ms);else if(layer.type==='text')drawTextLayer(targetCtx,layer,ms);});
-  if (!options.hideGuides) { drawGuides(targetCtx); drawSelectedNull(targetCtx,ms); } targetCtx.restore();
+  if (!options.hideGuides) { drawGuides(targetCtx); drawSelectedNull(targetCtx,ms); drawSelectedAlignmentAnchor(targetCtx,ms); } targetCtx.restore();
 }
 
 function normalizeLayer(layer, modelRef) {
   const base = transform(modelRef.canvasWidth/2,modelRef.canvasHeight/2,1,0,1);
   const bindMs = layer.parentBindMs ?? layer.parentStartMs ?? null; const bindMatrix = Array.isArray(layer.parentBindMatrix) && layer.parentBindMatrix.length === 6 ? layer.parentBindMatrix.map(Number) : null; const out = { ...layer, parentId: layer.parentId || null, parentBindMs: bindMs == null ? null : Math.max(0, num(bindMs, 0)), parentBindMatrix: bindMatrix, parentBindOpacity: layer.parentBindOpacity == null ? null : num(layer.parentBindOpacity, 1), base: { ...base, ...(layer.base||{}) } }; delete out.parentStartMs;
+  out.alignment = { ...alignmentDefaults(), ...(layer.alignment||{}) };
   out.reveal = { ...revealDefaults(layer.type), ...(layer.reveal||{}) };
   out.transform = { ...transformClip(out.base,false), ...(layer.transform||{}), from:{...out.base,...(layer.transform?.from||{})},to:{...out.base,...(layer.transform?.to||{})},curve:Array.isArray(layer.transform?.curve)?layer.transform.curve.map(Number):[...BUILTIN_CURVES.snappy.curve] };
   if (layer.type==='text') out.content={text:'NEW TEXT',fontFamily:'Anton',fontSize:52,fontWeight:400,letterSpacing:2,color:'#fff',align:'center',maxWidth:Math.round(modelRef.canvasWidth*.8),autoFit:true,...(layer.content||{})};
@@ -414,6 +527,14 @@ function syncTimeUI(){const total=durationMs();$('timeReadout').textContent=`${(
 
 function parentOptions(layer){const options=['<option value="">None</option>'];layerIds().forEach(id=>{const candidate=model.layers[id];if(candidate.type!=='null'||id===layer.id||wouldCreateCycle(layer.id,id))return;options.push(`<option value="${id}">${escapeHtml(candidate.name)}</option>`);});return options.join('');}
 function syncLayerInspector(){const l=selectedLayer();if(!l)return;$('layerName').value=l.name;$('layerTypeBadge').textContent=l.type;$('layerTypeBadge').className=`type-badge ${l.type}`;$('deleteLayerBtn').disabled=layerIds().length<=1;$('parentLayer').innerHTML=parentOptions(l);$('parentLayer').value=l.parentId||'';const parentHint=$('parentPickupHint');if(parentHint){const pickup=parentBindMs(l);parentHint.hidden=!l.parentId;parentHint.textContent=!l.parentId?'':pickup==null?'Legacy parent relation. Reassign the parent at the desired timeline position to create a bind pose.':`Bound to ${model.layers[l.parentId]?.name||'parent'} at ${formatTime(pickup)}. This is only the reference pose; parent motion before and after this frame is included.`;}
+  const align = alignmentState(l);
+  $('alignReference').value = align.reference;
+  $('alignTarget').value = align.target;
+  document.querySelectorAll('[data-align-anchor]').forEach((button) => button.classList.toggle('active', button.dataset.alignAnchor === align.anchor));
+  $('alignAnchorName').textContent = ALIGN_NAMES[align.anchor] || 'Center';
+  $('alignHelp').textContent = align.reference === 'anchor'
+    ? `The ${ALIGN_NAMES[align.anchor] || 'selected'} object anchor is placed on the frame point you click.`
+    : 'Each placement button aligns the matching side, corner, or center of the current object bounds.';
   ['baseX','baseY','baseScale','baseRotation','baseOpacity'].forEach(id=>$(id).disabled=l.transform.enabled);
   $('baseX').value=Math.round(l.base.x*100)/100;$('baseY').value=Math.round(l.base.y*100)/100;$('baseScale').value=l.base.scale;$('baseRotation').value=l.base.rotation;$('baseOpacity').value=l.base.opacity;
   $('textControls').hidden=l.type!=='text';$('imageControls').hidden=l.type!=='image';$('nullHint').hidden=l.type!=='null';
@@ -448,6 +569,10 @@ function setupLayerBindings(){
   $('layerName').addEventListener('input',()=>{selectedLayer().name=$('layerName').value.slice(0,50)||'Layer';syncTimeline();scheduleSave();});$('layerName').addEventListener('change',commitHistory);
   $('deleteLayerBtn').addEventListener('click',deleteSelectedLayer);
   $('parentLayer').addEventListener('change',()=>{const l=selectedLayer(),next=$('parentLayer').value||null;if(next&&wouldCreateCycle(l.id,next))return;reparentLayer(l.id,next);syncAll();commitHistory();});
+  $('alignReference').addEventListener('change',()=>{const l=selectedLayer();alignmentState(l).reference=$('alignReference').value;syncLayerInspector();renderFrame(playhead);commitHistory();scheduleSave();});
+  $('alignTarget').addEventListener('change',()=>{const l=selectedLayer();alignmentState(l).target=$('alignTarget').value;syncLayerInspector();commitHistory();scheduleSave();});
+  document.querySelectorAll('[data-align-anchor]').forEach((button)=>button.addEventListener('click',()=>{const l=selectedLayer(),a=alignmentState(l);a.anchor=button.dataset.alignAnchor;a.reference='anchor';syncLayerInspector();renderFrame(playhead);commitHistory();scheduleSave();}));
+  document.querySelectorAll('[data-align-place]').forEach((button)=>button.addEventListener('click',()=>alignSelectedLayer(button.dataset.alignPlace)));
   for(const[key,id]of[['x','baseX'],['y','baseY'],['scale','baseScale'],['rotation','baseRotation'],['opacity','baseOpacity']])bindSimple(id,()=>selectedLayer().base[key],v=>selectedLayer().base[key]=v,{numeric:true,after:()=>{const l=selectedLayer();if(!l.transform.enabled){l.transform.from=clone(l.base);l.transform.to=clone(l.base);}renderFrame(playhead);}});
   $('textValue').addEventListener('input',()=>{const l=selectedLayer();if(l.type!=='text')return;l.content.text=$('textValue').value;renderFrame(playhead);scheduleSave();});$('textValue').addEventListener('change',commitHistory);
   for(const[key,id]of[['fontSize','fontSize'],['fontWeight','fontWeight'],['letterSpacing','letterSpacing'],['maxWidth','textMaxWidth']])bindSimple(id,()=>selectedLayer().content?.[key],v=>{if(selectedLayer().type==='text')selectedLayer().content[key]=v;},{numeric:true,after:()=>renderFrame(playhead)});
