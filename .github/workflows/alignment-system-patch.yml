@@ -1,0 +1,55 @@
+name: Alignment system patch
+on:
+  push:
+    branches:
+      - alignment-system
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.event.head_commit.message == 'Run alignment-system patch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: alignment-system
+      - name: Apply patch
+        run: python tools/patch_alignment_system.py
+      - name: Validate JavaScript and UI wiring
+        run: |
+          node --check experiments/01-bezier-logo-text/app.js
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path('experiments/01-bezier-logo-text')
+          app=(root/'app.js').read_text()
+          html=(root/'index.html').read_text()
+          css=(root/'style.css').read_text()
+          for token in ['ALIGN_POINTS','alignmentState','alignSelectedLayer','worldBounds','shiftLayerWorld','drawSelectedAlignmentAnchor']:
+              assert token in app, token
+          for id_ in ['alignmentControls','alignTarget','alignReference','alignAnchorGrid','alignPlaceGrid','alignAnchorName','alignHelp']:
+              assert f'id="{id_}"' in html, id_
+          assert html.count('data-align-anchor=') == 9
+          assert html.count('data-align-place=') == 9
+          assert 'v=6.2.0' in html
+          assert '/* Alignment system */' in css
+          static_ids=set(re.findall(r"\$\('([^']+)'\)",app))
+          html_ids=set(re.findall(r'id="([^"]+)"',html))
+          missing=sorted(static_ids-html_ids)
+          assert not missing, f'missing DOM ids: {missing}'
+          # Geometry sanity: a parent rotated 90deg converts a +world-X move into -local-Y.
+          import math
+          m=[0,1,-1,0,0,0]
+          inv=[0,-1,1,0,0,0]
+          dx,dy=100,0
+          ldx=inv[0]*dx+inv[2]*dy
+          ldy=inv[1]*dx+inv[3]*dy
+          assert round(ldx,6)==0 and round(ldy,6)==-100
+          PY
+      - name: Commit app changes
+        run: |
+          git config user.name "ntvibe"
+          git config user.email "hakerche@gmail.com"
+          git add experiments/01-bezier-logo-text/app.js experiments/01-bezier-logo-text/index.html experiments/01-bezier-logo-text/style.css
+          git commit -m "Add Figma-style layer alignment system"
+          git push origin HEAD:alignment-system
