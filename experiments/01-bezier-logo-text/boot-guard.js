@@ -31,17 +31,31 @@
     return rows.length > 0 && !!name && name.value.trim().length > 0 && !!canvas && canvas.width > 0 && canvas.height > 0;
   }
 
+  function appendStylesheet(href) {
+    const css = document.createElement('link');
+    css.rel = 'stylesheet';
+    css.href = href;
+    document.head.appendChild(css);
+  }
+  function appendModule(src) {
+    const script = document.createElement('script');
+    script.type = 'module';
+    script.src = src;
+    document.body.appendChild(script);
+  }
+
   function loadEnhancements() {
     if (enhancementsLoaded) return;
     enhancementsLoaded = true;
-    const css = document.createElement('link');
-    css.rel = 'stylesheet';
-    css.href = './enhancements.css?v=6.3.0';
-    document.head.appendChild(css);
-    const script = document.createElement('script');
-    script.type = 'module';
-    script.src = './enhancements.js?v=6.3.0';
-    document.body.appendChild(script);
+
+    appendStylesheet('./enhancements.css?v=6.3.0');
+    appendModule('./enhancements.js?v=6.3.0');
+
+    const mobileTimeline = window.matchMedia?.('(max-width: 820px)').matches || window.matchMedia?.('(pointer: coarse)').matches;
+    if (mobileTimeline) {
+      appendStylesheet('./mobile-timeline.css?v=6.4.0');
+      appendModule('./mobile-timeline.js?v=6.4.0');
+    }
   }
 
   function showRecoveryMessage() {
