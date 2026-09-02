@@ -1,0 +1,29 @@
+name: Editor boot sanity check
+on:
+  push:
+    branches: [fix-generic-layer-boot]
+  workflow_dispatch:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check JavaScript syntax
+        run: |
+          node --check experiments/01-bezier-logo-text/app.js
+          node --check experiments/01-bezier-logo-text/boot-guard.js
+      - name: Check static controller IDs exist
+        run: |
+          python - <<'PY'
+          import re, pathlib, sys
+          root = pathlib.Path('experiments/01-bezier-logo-text')
+          js = (root/'app.js').read_text()
+          html = (root/'index.html').read_text()
+          refs = sorted(set(re.findall(r"\$\('([^']+)'\)", js)))
+          ids = set(re.findall(r'id="([^"]+)"', html))
+          missing = [x for x in refs if x not in ids]
+          print('Static IDs referenced:', len(refs))
+          print('Missing:', missing)
+          if missing:
+              sys.exit(1)
+          PY
