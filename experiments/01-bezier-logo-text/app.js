@@ -2,460 +2,135 @@ const $ = (id) => document.getElementById(id);
 const canvas = $('stage');
 const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-const STORAGE_KEY = 'anim-studio:experiment-01:v4';
-const LOGOS = {
-  wordmark: './assets/logos/wordmark.svg',
-  combination: './assets/logos/combination.svg',
-  stacked: './assets/logos/stacked.svg',
-  lettermark: './assets/logos/lettermark.svg',
-};
-const CANVAS_PRESETS = {
-  '1:1': [1080, 1080], '16:9': [1920, 1080], '9:16': [1080, 1920], '4:5': [1080, 1350], '4:3': [1200, 900], banner: [1200, 400],
-};
-const CURVE_PRESETS = {
-  fast: [0.22, 1, 0.36, 1],
-  expo: [0.16, 1, 0.3, 1],
-  smooth: [0.65, 0, 0.35, 1],
-  back: [0.34, 1.56, 0.64, 1],
-  snappy: [0.05, 0.9, 0.1, 1],
+const STORAGE_KEY = 'anim-studio:experiment-01:v5';
+const LEGACY_STORAGE_KEY = 'anim-studio:experiment-01:v4';
+const LOGOS = { wordmark: './assets/logos/wordmark.svg', combination: './assets/logos/combination.svg', stacked: './assets/logos/stacked.svg', lettermark: './assets/logos/lettermark.svg' };
+const CANVAS_PRESETS = { '1:1': [1080,1080], '16:9': [1920,1080], '9:16': [1080,1920], '4:5': [1080,1350], '4:3': [1200,900], banner: [1200,400] };
+const BUILTIN_CURVES = {
+  fast:{name:'Fast Out',curve:[0.22,1,0.36,1]}, expo:{name:'Expo Out',curve:[0.16,1,0.3,1]}, smooth:{name:'Ease In Out',curve:[0.65,0,0.35,1]}, back:{name:'Back',curve:[0.34,1.56,0.64,1]}, snappy:{name:'Snappy',curve:[0.05,0.9,0.1,1]}
 };
 const MOTION_PRESETS = {
-  smooth: { enter: 700, hold: 600, exit: 650, travel: 40, scale: 0.96, stagger: 25, enterBezier: CURVE_PRESETS.fast, exitBezier: CURVE_PRESETS.smooth },
-  snappy: { enter: 450, hold: 250, exit: 400, travel: 65, scale: 0.9, stagger: 20, enterBezier: CURVE_PRESETS.expo, exitBezier: CURVE_PRESETS.smooth },
-  soft: { enter: 950, hold: 800, exit: 850, travel: 28, scale: 0.98, stagger: 40, enterBezier: CURVE_PRESETS.fast, exitBezier: CURVE_PRESETS.smooth },
-  pop: { enter: 600, hold: 450, exit: 550, travel: 32, scale: 0.84, stagger: 28, enterBezier: CURVE_PRESETS.back, exitBezier: CURVE_PRESETS.fast },
+  smooth:{enter:700,hold:600,exit:650,travel:40,scale:.96,stagger:25,enterBezier:BUILTIN_CURVES.fast.curve,exitBezier:BUILTIN_CURVES.smooth.curve},
+  snappy:{enter:450,hold:250,exit:400,travel:65,scale:.9,stagger:20,enterBezier:BUILTIN_CURVES.expo.curve,exitBezier:BUILTIN_CURVES.smooth.curve},
+  soft:{enter:950,hold:800,exit:850,travel:28,scale:.98,stagger:40,enterBezier:BUILTIN_CURVES.fast.curve,exitBezier:BUILTIN_CURVES.smooth.curve},
+  pop:{enter:600,hold:450,exit:550,travel:32,scale:.84,stagger:28,enterBezier:BUILTIN_CURVES.back.curve,exitBezier:BUILTIN_CURVES.fast.curve}
 };
+const clone=(v)=>JSON.parse(JSON.stringify(v));
+const clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const num=(v,fallback=0)=>Number.isFinite(Number(v))?Number(v):fallback;
+const curvesEqual=(a,b)=>Array.isArray(a)&&Array.isArray(b)&&a.length===4&&b.length===4&&a.every((n,i)=>Math.abs(Number(n)-Number(b[i]))<.0001);
 
-const clone = (v) => JSON.parse(JSON.stringify(v));
-const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
-const lerp = (a, b, t) => a + (b - a) * t;
-const num = (v, fallback = 0) => Number.isFinite(Number(v)) ? Number(v) : fallback;
-
+function positionDefaults(enabled=false){return{enabled,start:0,duration:850,from:{x:0,y:0},to:{x:0,y:0},curve:[...BUILTIN_CURVES.snappy.curve]};}
+function visibleLayerDefaults(type,name){return{id:type,type,name,parentId:null,start:type==='text'?120:0,mode:'in-hold-out',enter:850,hold:350,exit:750,enterDirection:'from-bottom',exitDirection:'to-top',travel:50,scale:type==='text'?.96:.94,stagger:type==='text'?35:0,enterBezier:[...BUILTIN_CURVES.snappy.curve],exitBezier:[.85,0,1,.2],position:positionDefaults(false)};}
+function nullLayerDefaults(id,name){return{id,type:'null',name,parentId:null,position:positionDefaults(true)};}
 const DEFAULT_MODEL = {
-  headline: 'MORGEN MACHT MAN HEUTE.',
-  fontFamily: 'Anton', fontSize: 52, fontWeight: 400, letterSpacing: 2, wordSpacing: 0, textAlign: 'center', textTransform: 'uppercase', textColor: '#ffffff', autoFit: true,
-  position: 'below', gap: 28, alignment: 'center', verticalAlignment: 'center', offsetX: 0, offsetY: 0, logoOffsetX: 0, logoOffsetY: 0, textOffsetX: 0, textOffsetY: 0,
-  logoType: 'wordmark', logoSize: 220, logoColor: '#ffffff',
-  canvasWidth: 800, canvasHeight: 450, bgColor: '#103e36', marginX: 60, marginY: 40, showMargins: true, showGrid: false,
-  fps: 30, exportScale: 1, gifColors: 256, gifLoop: true,
-  playbackRate: 1, previewLoop: true, viewportZoom: 'fit', snap: true,
-  layers: {
-    logo: { start: 0, mode: 'in-hold-out', enter: 850, hold: 350, exit: 750, enterDirection: 'from-bottom', exitDirection: 'to-top', travel: 50, scale: 0.94, stagger: 0, enterBezier: [0.05, 0.9, 0.1, 1], exitBezier: [0.85, 0, 1, 0.2] },
-    text: { start: 120, mode: 'in-hold-out', enter: 850, hold: 350, exit: 750, enterDirection: 'from-bottom', exitDirection: 'to-top', travel: 50, scale: 0.96, stagger: 35, enterBezier: [0.05, 0.9, 0.1, 1], exitBezier: [0.85, 0, 1, 0.2] },
-  },
+  headline:'MORGEN MACHT MAN HEUTE.',fontFamily:'Anton',fontSize:52,fontWeight:400,letterSpacing:2,wordSpacing:0,textAlign:'center',textTransform:'uppercase',textColor:'#ffffff',autoFit:true,
+  position:'below',gap:28,alignment:'center',verticalAlignment:'center',offsetX:0,offsetY:0,logoOffsetX:0,logoOffsetY:0,textOffsetX:0,textOffsetY:0,
+  logoType:'wordmark',logoSize:220,logoColor:'#ffffff',canvasWidth:800,canvasHeight:450,bgColor:'#103e36',marginX:60,marginY:40,showMargins:true,showGrid:false,
+  fps:30,exportScale:1,gifColors:256,gifLoop:true,playbackRate:1,previewLoop:true,viewportZoom:'fit',snap:true,curvePresets:{},nextNullId:1,layerOrder:['logo','text'],layers:{logo:visibleLayerDefaults('logo','Logo'),text:visibleLayerDefaults('text','Text')}
 };
+let model=clone(DEFAULT_MODEL),selectedLayer='logo',selectedCurve='position',customLogo=null,logoImage=null,logoAspect=160/704,logoObjectUrl=null,fontToken=0,logoToken=0,playhead=0,isPlaying=false,rafId=null,playbackStartedAt=0,playbackOffsetMs=0,activeDrag=null,history=[JSON.stringify(DEFAULT_MODEL)],historyIndex=0,saveTimer=null,restoring=false;
 
-let model = clone(DEFAULT_MODEL);
-let selectedLayer = 'logo';
-let selectedCurve = 'enter';
-let customLogo = null;
-let logoImage = null;
-let logoAspect = 160 / 704;
-let logoObjectUrl = null;
-let fontToken = 0;
-let logoToken = 0;
-let playhead = 0;
-let isPlaying = false;
-let rafId = null;
-let playbackStartedAt = 0;
-let playbackOffsetMs = 0;
-let activeDrag = null;
-let history = [JSON.stringify(model)];
-let historyIndex = 0;
-let saveTimer = null;
-let restoring = false;
+function normalizePosition(p,enabled=false){const base=positionDefaults(enabled);return{...base,...(p||{}),from:{...base.from,...(p?.from||{})},to:{...base.to,...(p?.to||{})},curve:Array.isArray(p?.curve)&&p.curve.length===4?p.curve.map(Number):base.curve};}
+function normalizeLayer(id,incoming){const type=incoming?.type||(id==='logo'?'logo':id==='text'?'text':'null');if(type==='null'){const base=nullLayerDefaults(id,incoming?.name||`Null ${id.replace(/\D/g,'')||''}`.trim());return{...base,...incoming,id,type,position:normalizePosition(incoming?.position,true)};}const base=visibleLayerDefaults(type,incoming?.name||(type==='logo'?'Logo':'Text'));return{...base,...incoming,id,type,position:normalizePosition(incoming?.position,false),enterBezier:[...(incoming?.enterBezier||base.enterBezier)],exitBezier:[...(incoming?.exitBezier||base.exitBezier)]};}
+function normalizeModel(incoming){const base=clone(DEFAULT_MODEL),source=incoming&&typeof incoming==='object'?incoming:{};const merged={...base,...source,curvePresets:{...(source.curvePresets||{})},layers:{},layerOrder:[]};const sourceLayers=source.layers||{};merged.layers.logo=normalizeLayer('logo',sourceLayers.logo||base.layers.logo);merged.layers.text=normalizeLayer('text',sourceLayers.text||base.layers.text);Object.entries(sourceLayers).forEach(([id,layer])=>{if(id!=='logo'&&id!=='text')merged.layers[id]=normalizeLayer(id,layer);});const order=Array.isArray(source.layerOrder)?source.layerOrder:['logo','text',...Object.keys(merged.layers).filter((id)=>id!=='logo'&&id!=='text')];order.forEach((id)=>{if(merged.layers[id]&&!merged.layerOrder.includes(id))merged.layerOrder.push(id);});Object.keys(merged.layers).forEach((id)=>{if(!merged.layerOrder.includes(id))merged.layerOrder.push(id);});merged.nextNullId=Math.max(1,num(source.nextNullId,1));return merged;}
+function layerIds(){return model.layerOrder.filter((id)=>model.layers[id]);}
+function selectedMotion(){return model.layers[selectedLayer]||model.layers.logo;}
+function isVisualLayer(l){return l?.type==='logo'||l?.type==='text';}
+function lifecycleDuration(l){if(!isVisualLayer(l))return 0;if(l.mode==='static')return Math.max(250,l.hold||1000);if(l.mode==='in-only')return Math.max(50,l.enter);if(l.mode==='out-only')return Math.max(50,l.exit);if(l.mode==='in-out')return Math.max(100,l.enter+l.exit);if(l.mode==='in-stay')return Math.max(50,l.enter+l.hold);return Math.max(100,l.enter+l.hold+l.exit);}
+function lifecycleEnd(l){return isVisualLayer(l)?l.start+lifecycleDuration(l):0;}
+function positionEnd(l){return l?.position?.enabled?Math.max(0,l.position.start)+Math.max(1,l.position.duration):0;}
+function layerEnd(l){return Math.max(lifecycleEnd(l),positionEnd(l));}
+function durationMs(){return Math.max(500,...layerIds().map((id)=>layerEnd(model.layers[id])));}
+function phaseDurations(l){if(!isVisualLayer(l))return[0,0,0];if(l.mode==='static')return[0,lifecycleDuration(l),0];if(l.mode==='in-only')return[lifecycleDuration(l),0,0];if(l.mode==='out-only')return[0,0,lifecycleDuration(l)];if(l.mode==='in-out')return[l.enter,0,l.exit];if(l.mode==='in-stay')return[l.enter,l.hold,0];return[l.enter,l.hold,l.exit];}
 
-function layerDuration(layer) {
-  const l = model.layers[layer];
-  if (l.mode === 'static') return Math.max(250, l.hold || 1000);
-  if (l.mode === 'in-only') return Math.max(50, l.enter);
-  if (l.mode === 'out-only') return Math.max(50, l.exit);
-  if (l.mode === 'in-out') return Math.max(100, l.enter + l.exit);
-  if (l.mode === 'in-stay') return Math.max(50, l.enter + l.hold);
-  return Math.max(100, l.enter + l.hold + l.exit);
-}
-function layerEnd(layer) { return model.layers[layer].start + layerDuration(layer); }
-function durationMs() { return Math.max(500, layerEnd('logo'), layerEnd('text')); }
-function phaseDurations(layer) {
-  const l = model.layers[layer];
-  if (l.mode === 'static') return [0, layerDuration(layer), 0];
-  if (l.mode === 'in-only') return [layerDuration(layer), 0, 0];
-  if (l.mode === 'out-only') return [0, 0, layerDuration(layer)];
-  if (l.mode === 'in-out') return [l.enter, 0, l.exit];
-  if (l.mode === 'in-stay') return [l.enter, l.hold, 0];
-  return [l.enter, l.hold, l.exit];
-}
-function transformText(text) {
-  if (model.textTransform === 'uppercase') return text.toUpperCase();
-  if (model.textTransform === 'lowercase') return text.toLowerCase();
-  if (model.textTransform === 'capitalize') return text.replace(/\b\w/g, (c) => c.toUpperCase());
-  return text;
-}
+function snapshot(){return JSON.stringify(model);}
+function syncHistoryButtons(){$('undoBtn').disabled=historyIndex<=0;$('redoBtn').disabled=historyIndex>=history.length-1;}
+function commitHistory(){if(restoring)return;const s=snapshot();if(history[historyIndex]===s){scheduleSave();return;}history=history.slice(0,historyIndex+1);history.push(s);if(history.length>80)history.shift();historyIndex=history.length-1;syncHistoryButtons();scheduleSave();}
+function restoreHistory(index){if(index<0||index>=history.length)return;historyIndex=index;model=normalizeModel(JSON.parse(history[index]));if(!model.layers[selectedLayer])selectedLayer='logo';syncAll({reloadLogo:true,reloadFont:true});syncHistoryButtons();scheduleSave();}
+function undo(){restoreHistory(historyIndex-1);}function redo(){restoreHistory(historyIndex+1);}
+function scheduleSave(){if(restoring)return;$('saveStatus').innerHTML='<i></i>Saving…';$('saveStatus').classList.add('saving');clearTimeout(saveTimer);saveTimer=setTimeout(saveNow,320);}
+function saveNow(){try{const safe=clone(model);if(safe.logoType==='custom')safe.logoType='wordmark';localStorage.setItem(STORAGE_KEY,JSON.stringify(safe));$('saveStatus').innerHTML='<i></i>Autosaved';$('saveStatus').classList.remove('saving');}catch{$('saveStatus').textContent='Save unavailable';}}
+function loadSaved(){for(const key of[STORAGE_KEY,LEGACY_STORAGE_KEY]){try{const raw=localStorage.getItem(key);if(!raw)continue;model=normalizeModel(JSON.parse(raw));return true;}catch{}}return false;}
 
-function snapshot() { return JSON.stringify(model); }
-function commitHistory() {
-  if (restoring) return;
-  const s = snapshot();
-  if (history[historyIndex] === s) return;
-  history = history.slice(0, historyIndex + 1);
-  history.push(s);
-  if (history.length > 80) history.shift();
-  historyIndex = history.length - 1;
-  syncHistoryButtons();
-  scheduleSave();
-}
-function restoreHistory(index) {
-  if (index < 0 || index >= history.length) return;
-  historyIndex = index;
-  model = JSON.parse(history[index]);
-  syncAll({ reloadLogo: true, reloadFont: true });
-  syncHistoryButtons();
-  scheduleSave();
-}
-function undo() { restoreHistory(historyIndex - 1); }
-function redo() { restoreHistory(historyIndex + 1); }
-function syncHistoryButtons() { $('undoBtn').disabled = historyIndex <= 0; $('redoBtn').disabled = historyIndex >= history.length - 1; }
+function bezierCoord(t,a1,a2){const o=1-t;return 3*o*o*t*a1+3*o*t*t*a2+t*t*t;}
+function bezierDerivative(t,a1,a2){const o=1-t;return 3*o*o*a1+6*o*t*(a2-a1)+3*t*t*(1-a2);}
+function cubicBezierEase(x,x1,y1,x2,y2){x=clamp(x,0,1);let t=x;for(let i=0;i<7;i++){const err=bezierCoord(t,x1,x2)-x,slope=bezierDerivative(t,x1,x2);if(Math.abs(err)<1e-6||Math.abs(slope)<1e-6)break;t=clamp(t-err/slope,0,1);}let lo=0,hi=1;for(let i=0;i<12;i++){const current=bezierCoord(t,x1,x2);if(Math.abs(current-x)<1e-6)break;if(current<x)lo=t;else hi=t;t=(lo+hi)/2;}return bezierCoord(t,y1,y2);}
+function directionVector(v){if(v?.endsWith('left'))return[-1,0];if(v?.endsWith('right'))return[1,0];if(v?.endsWith('top'))return[0,-1];if(v?.endsWith('bottom'))return[0,1];return[0,0];}
+function motionState(layerName,globalMs,wordIndex=0,wordCount=1){const l=model.layers[layerName];if(!isVisualLayer(l))return{alpha:1,x:0,y:0,scale:1};const localMs=globalMs-l.start;if(localMs<0)return{alpha:0,x:0,y:0,scale:l.scale};if(l.mode==='static')return{alpha:1,x:0,y:0,scale:1};const enterVec=directionVector(l.enterDirection),exitVec=directionVector(l.exitDirection);if(l.mode==='out-only'){const p=cubicBezierEase(clamp(localMs/Math.max(1,l.exit),0,1),...l.exitBezier);return{alpha:1-p,x:exitVec[0]*l.travel*p,y:exitVec[1]*l.travel*p,scale:1};}const stagger=l.type==='text'&&wordCount>1?wordIndex*l.stagger:0,enterEnd=stagger+l.enter;if(localMs<enterEnd){const p=cubicBezierEase(clamp((localMs-stagger)/Math.max(1,l.enter),0,1),...l.enterBezier);return{alpha:p,x:enterVec[0]*l.travel*(1-p),y:enterVec[1]*l.travel*(1-p),scale:lerp(l.scale,1,p)};}if(l.mode==='in-only'||l.mode==='in-stay')return{alpha:1,x:0,y:0,scale:1};const exitStart=l.mode==='in-out'?l.enter:l.enter+l.hold;if(localMs<=exitStart)return{alpha:1,x:0,y:0,scale:1};const p=cubicBezierEase(clamp((localMs-exitStart)/Math.max(1,l.exit),0,1),...l.exitBezier);return{alpha:1-p,x:exitVec[0]*l.travel*p,y:exitVec[1]*l.travel*p,scale:1};}
+function ownPositionOffset(layerName,globalMs){const p=model.layers[layerName]?.position;if(!p?.enabled)return{x:0,y:0};const start=Math.max(0,p.start),duration=Math.max(1,p.duration);if(globalMs<=start)return{x:p.from.x,y:p.from.y};if(globalMs>=start+duration)return{x:p.to.x,y:p.to.y};const e=cubicBezierEase(clamp((globalMs-start)/duration,0,1),...p.curve);return{x:lerp(p.from.x,p.to.x,e),y:lerp(p.from.y,p.to.y,e)};}
+function worldPositionOffset(layerName,globalMs,seen=new Set()){const l=model.layers[layerName];if(!l||seen.has(layerName))return{x:0,y:0};seen.add(layerName);const own=ownPositionOffset(layerName,globalMs);if(!l.parentId||!model.layers[l.parentId])return own;const parent=worldPositionOffset(l.parentId,globalMs,seen);return{x:own.x+parent.x,y:own.y+parent.y};}
 
-function scheduleSave() {
-  if (restoring) return;
-  const status = $('saveStatus');
-  status.innerHTML = '<i></i>Saving…';
-  status.classList.add('saving');
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(saveNow, 320);
-}
-function saveNow() {
-  try {
-    const safe = clone(model);
-    if (safe.logoType === 'custom') safe.logoType = 'wordmark';
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(safe));
-    $('saveStatus').innerHTML = '<i></i>Autosaved';
-    $('saveStatus').classList.remove('saving');
-  } catch {
-    $('saveStatus').textContent = 'Save unavailable';
-  }
-}
-function loadSaved() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return false;
-    const parsed = JSON.parse(raw);
-    if (!parsed?.layers?.logo || !parsed?.layers?.text) return false;
-    model = { ...clone(DEFAULT_MODEL), ...parsed, layers: { logo: { ...clone(DEFAULT_MODEL.layers.logo), ...parsed.layers.logo }, text: { ...clone(DEFAULT_MODEL.layers.text), ...parsed.layers.text } } };
-    return true;
-  } catch { return false; }
-}
+function transformText(text){if(model.textTransform==='uppercase')return text.toUpperCase();if(model.textTransform==='lowercase')return text.toLowerCase();if(model.textTransform==='capitalize')return text.replace(/\b\w/g,(c)=>c.toUpperCase());return text;}
+function fontString(s){return`${s.fontWeight} ${s.fontSize}px "${s.fontFamily.replace(/"/g,'')}", sans-serif`;}
+function measureSpacedText(context,text,s){context.font=fontString(s);let width=0;for(let i=0;i<text.length;i++){const ch=text[i];width+=context.measureText(ch).width;if(i<text.length-1)width+=ch===' '?s.wordSpacing+s.letterSpacing:s.letterSpacing;}return width;}
+function drawWord(context,word,x,y,s){context.font=fontString(s);context.textAlign='left';context.textBaseline='middle';let cursor=x;for(let i=0;i<word.length;i++){const ch=word[i];context.fillText(ch,cursor,y);cursor+=context.measureText(ch).width+(i<word.length-1?s.letterSpacing:0);}}
+function textWordLayout(context,text,s){const words=text.split(/\s+/).filter(Boolean),widths=words.map((w)=>measureSpacedText(context,w,{...s,wordSpacing:0}));context.font=fontString(s);const space=context.measureText(' ').width+s.wordSpacing+s.letterSpacing;return{words,widths,space,totalWidth:widths.reduce((a,b)=>a+b,0)+Math.max(0,words.length-1)*space};}
+function logoDimensions(){return{w:model.logoSize,h:model.logoSize*(logoAspect>0?logoAspect:.28)};}
+function resolvedTextState(context){const s={...model,headline:transformText(model.headline||' ')};if(!model.autoFit)return s;const logo=logoDimensions(),safeWidth=Math.max(40,model.canvasWidth-Math.min(model.marginX,model.canvasWidth/2-1)*2),maxTextWidth=['left','right'].includes(model.position)?Math.max(40,safeWidth-logo.w-model.gap):safeWidth;let size=model.fontSize,candidate={...s,fontSize:size};while(size>10&&measureSpacedText(context,candidate.headline,candidate)>maxTextWidth){size-=1;candidate={...candidate,fontSize:size};}return candidate;}
+function lockupLayout(context,s){const width=model.canvasWidth,height=model.canvasHeight,logo=logoDimensions(),textW=measureSpacedText(context,s.headline,s),textH=s.fontSize*1.05,cx=width/2+model.offsetX,cy=height/2+model.offsetY;let logoX=cx,logoY=cy,textX=cx,textY=cy;if(model.position==='below'||model.position==='above'){const blockW=Math.max(logo.w,textW),blockH=logo.h+model.gap+textH,left=cx-blockW/2,alignX=(itemW)=>model.alignment==='start'?left+itemW/2:model.alignment==='end'?left+blockW-itemW/2:cx,top=cy-blockH/2;if(model.position==='below'){logoX=alignX(logo.w);logoY=top+logo.h/2;textX=alignX(textW);textY=top+logo.h+model.gap+textH/2;}else{textX=alignX(textW);textY=top+textH/2;logoX=alignX(logo.w);logoY=top+textH+model.gap+logo.h/2;}}else{const blockW=logo.w+model.gap+textW,blockH=Math.max(logo.h,textH),left=cx-blockW/2,top=cy-blockH/2,alignY=(itemH)=>model.verticalAlignment==='start'?top+itemH/2:model.verticalAlignment==='end'?top+blockH-itemH/2:cy;if(model.position==='right'){logoX=left+logo.w/2;textX=left+logo.w+model.gap+textW/2;}else{textX=left+textW/2;logoX=left+textW+model.gap+logo.w/2;}logoY=alignY(logo.h);textY=alignY(textH);}return{logoX:logoX+model.logoOffsetX,logoY:logoY+model.logoOffsetY,textX:textX+model.textOffsetX,textY:textY+model.textOffsetY,logoW:logo.w,logoH:logo.h};}
+function drawGuides(context,globalMs){context.save();if(model.showGrid){context.strokeStyle='rgba(255,255,255,.12)';context.lineWidth=1;for(let i=1;i<4;i++){const x=model.canvasWidth*i/4,y=model.canvasHeight*i/4;context.beginPath();context.moveTo(x,0);context.lineTo(x,model.canvasHeight);context.stroke();context.beginPath();context.moveTo(0,y);context.lineTo(model.canvasWidth,y);context.stroke();}}if(model.showMargins){const mx=Math.min(model.marginX,model.canvasWidth/2-1),my=Math.min(model.marginY,model.canvasHeight/2-1);context.strokeStyle='rgba(255,255,255,.42)';context.setLineDash([6,6]);context.strokeRect(mx,my,Math.max(1,model.canvasWidth-mx*2),Math.max(1,model.canvasHeight-my*2));context.setLineDash([]);}const selected=model.layers[selectedLayer];if(selected?.type==='null'){const pos=worldPositionOffset(selectedLayer,globalMs),x=model.canvasWidth/2+pos.x,y=model.canvasHeight/2+pos.y;context.strokeStyle='rgba(117,174,255,.95)';context.lineWidth=1.5;context.beginPath();context.moveTo(x-11,y);context.lineTo(x+11,y);context.moveTo(x,y-11);context.lineTo(x,y+11);context.stroke();context.beginPath();context.arc(x,y,5,0,Math.PI*2);context.stroke();}context.restore();}
+function renderFrame(t,targetCtx=ctx,width=canvas.width,height=canvas.height,options={}){const total=durationMs(),globalMs=clamp(t,0,1)*total;targetCtx.save();targetCtx.clearRect(0,0,width,height);targetCtx.scale(width/model.canvasWidth,height/model.canvasHeight);if(!options.transparent){targetCtx.fillStyle=model.bgColor;targetCtx.fillRect(0,0,model.canvasWidth,model.canvasHeight);}const textState=resolvedTextState(targetCtx),layout=lockupLayout(targetCtx,textState),logoMotion=motionState('logo',globalMs),logoPosition=worldPositionOffset('logo',globalMs);if(logoImage&&logoMotion.alpha>.001){targetCtx.save();targetCtx.globalAlpha=clamp(logoMotion.alpha,0,1);targetCtx.translate(layout.logoX+logoMotion.x+logoPosition.x,layout.logoY+logoMotion.y+logoPosition.y);targetCtx.scale(logoMotion.scale,logoMotion.scale);targetCtx.drawImage(logoImage,-layout.logoW/2,-layout.logoH/2,layout.logoW,layout.logoH);targetCtx.restore();}const words=textWordLayout(targetCtx,textState.headline,textState),textPosition=worldPositionOffset('text',globalMs);let wordX=textState.textAlign==='left'?layout.textX:textState.textAlign==='right'?layout.textX-words.totalWidth:layout.textX-words.totalWidth/2;words.words.forEach((word,i)=>{const motion=motionState('text',globalMs,i,words.words.length);targetCtx.save();targetCtx.globalAlpha=clamp(motion.alpha,0,1);targetCtx.fillStyle=textState.textColor;const center=wordX+words.widths[i]/2;targetCtx.translate(center+motion.x+textPosition.x,layout.textY+motion.y+textPosition.y);targetCtx.scale(motion.scale,motion.scale);targetCtx.translate(-center,-layout.textY);drawWord(targetCtx,word,wordX,layout.textY,textState);targetCtx.restore();wordX+=words.widths[i]+words.space;});if(!options.hideGuides)drawGuides(targetCtx,globalMs);targetCtx.restore();}
 
-function bezierCoord(t, a1, a2) { const o = 1 - t; return 3 * o * o * t * a1 + 3 * o * t * t * a2 + t * t * t; }
-function bezierDerivative(t, a1, a2) { const o = 1 - t; return 3 * o * o * a1 + 6 * o * t * (a2 - a1) + 3 * t * t * (1 - a2); }
-function cubicBezierEase(x, x1, y1, x2, y2) {
-  x = clamp(x, 0, 1); let t = x;
-  for (let i = 0; i < 7; i++) { const err = bezierCoord(t, x1, x2) - x; const slope = bezierDerivative(t, x1, x2); if (Math.abs(err) < 1e-6 || Math.abs(slope) < 1e-6) break; t = clamp(t - err / slope, 0, 1); }
-  let lo = 0, hi = 1;
-  for (let i = 0; i < 12; i++) { const current = bezierCoord(t, x1, x2); if (Math.abs(current - x) < 1e-6) break; if (current < x) lo = t; else hi = t; t = (lo + hi) / 2; }
-  return bezierCoord(t, y1, y2);
-}
-function directionVector(value) {
-  if (value.endsWith('left')) return [-1, 0];
-  if (value.endsWith('right')) return [1, 0];
-  if (value.endsWith('top')) return [0, -1];
-  if (value.endsWith('bottom')) return [0, 1];
-  return [0, 0];
-}
-function motionState(layerName, globalMs, wordIndex = 0, wordCount = 1) {
-  const l = model.layers[layerName];
-  const localMs = globalMs - l.start;
-  if (localMs < 0) return { alpha: 0, x: 0, y: 0, scale: l.scale };
-  if (l.mode === 'static') return { alpha: 1, x: 0, y: 0, scale: 1 };
-  const enterVec = directionVector(l.enterDirection), exitVec = directionVector(l.exitDirection);
-  if (l.mode === 'out-only') {
-    const p = cubicBezierEase(clamp(localMs / Math.max(1, l.exit), 0, 1), ...l.exitBezier);
-    return { alpha: 1 - p, x: exitVec[0] * l.travel * p, y: exitVec[1] * l.travel * p, scale: 1 };
-  }
-  const stagger = layerName === 'text' && wordCount > 1 ? wordIndex * l.stagger : 0;
-  const enterStart = stagger, enterEnd = enterStart + l.enter;
-  if (localMs < enterEnd) {
-    const p = cubicBezierEase(clamp((localMs - enterStart) / Math.max(1, l.enter), 0, 1), ...l.enterBezier);
-    return { alpha: p, x: enterVec[0] * l.travel * (1 - p), y: enterVec[1] * l.travel * (1 - p), scale: lerp(l.scale, 1, p) };
-  }
-  if (l.mode === 'in-only' || l.mode === 'in-stay') return { alpha: 1, x: 0, y: 0, scale: 1 };
-  const exitStart = l.mode === 'in-out' ? l.enter : l.enter + l.hold;
-  if (localMs <= exitStart) return { alpha: 1, x: 0, y: 0, scale: 1 };
-  const p = cubicBezierEase(clamp((localMs - exitStart) / Math.max(1, l.exit), 0, 1), ...l.exitBezier);
-  return { alpha: 1 - p, x: exitVec[0] * l.travel * p, y: exitVec[1] * l.travel * p, scale: 1 };
-}
+function aspectFromSvg(svgText){const m=svgText.match(/viewBox=["']\s*[-\d.]+\s+[-\d.]+\s+([\d.]+)\s+([\d.]+)["']/i);if(!m)return null;const w=Number(m[1]),h=Number(m[2]);return w>0&&h>0?h/w:null;}
+function colorizeSvg(svgText,color){return svgText.replace(/<svg([^>]*)>/i,(m)=>`${m}<style>path,rect,circle,polygon,ellipse{fill:${color} !important;}</style>`);}
+async function loadBuiltInLogo(type=model.logoType){if(type==='custom'){if(customLogo)logoImage=customLogo;renderFrame(playhead);return;}const token=++logoToken;try{const res=await fetch(LOGOS[type]||LOGOS.wordmark);if(!res.ok)throw new Error(`HTTP ${res.status}`);const source=await res.text(),parsedAspect=aspectFromSvg(source),blob=new Blob([colorizeSvg(source,model.logoColor)],{type:'image/svg+xml'}),url=URL.createObjectURL(blob),image=new Image();await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=reject;image.src=url;});if(token!==logoToken){URL.revokeObjectURL(url);return;}if(logoObjectUrl)URL.revokeObjectURL(logoObjectUrl);logoObjectUrl=url;logoImage=image;logoAspect=parsedAspect||image.naturalHeight/Math.max(1,image.naturalWidth);renderFrame(playhead);}catch(error){$('status').textContent=`Logo load failed: ${error.message||error}`;}}
+async function loadGoogleFont(){const family=model.fontFamily.trim()||'Anton',token=++fontToken;$('fontStatus').textContent=`Loading ${family}…`;$('googleFontStylesheet').href=`https://fonts.googleapis.com/css2?family=${encodeURIComponent(family).replace(/%20/g,'+')}&display=swap`;try{if(document.fonts){await document.fonts.load(`${model.fontWeight} 48px "${family}"`);await document.fonts.ready;}if(token!==fontToken)return;$('fontStatus').textContent=`${family} loaded from Google Fonts.`;renderFrame(playhead);}catch{if(token!==fontToken)return;$('fontStatus').textContent=`Could not confirm ${family}; fallback may be shown.`;}}
 
-function fontString(s) { return `${s.fontWeight} ${s.fontSize}px "${s.fontFamily.replace(/"/g, '')}", sans-serif`; }
-function measureSpacedText(context, text, s) {
-  context.font = fontString(s); let width = 0;
-  for (let i = 0; i < text.length; i++) { const ch = text[i]; width += context.measureText(ch).width; if (i < text.length - 1) width += ch === ' ' ? s.wordSpacing + s.letterSpacing : s.letterSpacing; }
-  return width;
-}
-function drawWord(context, word, x, y, s) {
-  context.font = fontString(s); context.textAlign = 'left'; context.textBaseline = 'middle'; let cursor = x;
-  for (let i = 0; i < word.length; i++) { const ch = word[i]; context.fillText(ch, cursor, y); cursor += context.measureText(ch).width + (i < word.length - 1 ? s.letterSpacing : 0); }
-}
-function textWordLayout(context, text, s) {
-  const words = text.split(/\s+/).filter(Boolean), widths = words.map((w) => measureSpacedText(context, w, { ...s, wordSpacing: 0 }));
-  context.font = fontString(s); const space = context.measureText(' ').width + s.wordSpacing + s.letterSpacing;
-  return { words, widths, space, totalWidth: widths.reduce((a, b) => a + b, 0) + Math.max(0, words.length - 1) * space };
-}
-function logoDimensions() { return { w: model.logoSize, h: model.logoSize * (logoAspect > 0 ? logoAspect : .28) }; }
-function resolvedTextState(context) {
-  const s = { ...model, headline: transformText(model.headline || ' ') };
-  if (!model.autoFit) return s;
-  const logo = logoDimensions(), safeWidth = Math.max(40, model.canvasWidth - Math.min(model.marginX, model.canvasWidth / 2 - 1) * 2);
-  const maxTextWidth = ['left', 'right'].includes(model.position) ? Math.max(40, safeWidth - logo.w - model.gap) : safeWidth;
-  let size = model.fontSize, candidate = { ...s, fontSize: size };
-  while (size > 10 && measureSpacedText(context, candidate.headline, candidate) > maxTextWidth) { size -= 1; candidate = { ...candidate, fontSize: size }; }
-  return candidate;
-}
-function lockupLayout(context, s) {
-  const width = model.canvasWidth, height = model.canvasHeight, logo = logoDimensions();
-  const textW = measureSpacedText(context, s.headline, s), textH = s.fontSize * 1.05, cx = width / 2 + model.offsetX, cy = height / 2 + model.offsetY;
-  let logoX = cx, logoY = cy, textX = cx, textY = cy;
-  if (model.position === 'below' || model.position === 'above') {
-    const blockW = Math.max(logo.w, textW), blockH = logo.h + model.gap + textH, left = cx - blockW / 2;
-    const alignX = (itemW) => model.alignment === 'start' ? left + itemW / 2 : model.alignment === 'end' ? left + blockW - itemW / 2 : cx;
-    const top = cy - blockH / 2;
-    if (model.position === 'below') { logoX = alignX(logo.w); logoY = top + logo.h / 2; textX = alignX(textW); textY = top + logo.h + model.gap + textH / 2; }
-    else { textX = alignX(textW); textY = top + textH / 2; logoX = alignX(logo.w); logoY = top + textH + model.gap + logo.h / 2; }
-  } else {
-    const blockW = logo.w + model.gap + textW, blockH = Math.max(logo.h, textH), left = cx - blockW / 2, top = cy - blockH / 2;
-    const alignY = (itemH) => model.verticalAlignment === 'start' ? top + itemH / 2 : model.verticalAlignment === 'end' ? top + blockH - itemH / 2 : cy;
-    if (model.position === 'right') { logoX = left + logo.w / 2; textX = left + logo.w + model.gap + textW / 2; }
-    else { textX = left + textW / 2; logoX = left + textW + model.gap + logo.w / 2; }
-    logoY = alignY(logo.h); textY = alignY(textH);
-  }
-  return { logoX: logoX + model.logoOffsetX, logoY: logoY + model.logoOffsetY, textX: textX + model.textOffsetX, textY: textY + model.textOffsetY, logoW: logo.w, logoH: logo.h };
-}
-function drawGuides(context) {
-  context.save();
-  if (model.showGrid) {
-    context.strokeStyle = 'rgba(255,255,255,.12)'; context.lineWidth = 1;
-    for (let i = 1; i < 4; i++) { const x = model.canvasWidth * i / 4, y = model.canvasHeight * i / 4; context.beginPath(); context.moveTo(x, 0); context.lineTo(x, model.canvasHeight); context.stroke(); context.beginPath(); context.moveTo(0, y); context.lineTo(model.canvasWidth, y); context.stroke(); }
-  }
-  if (model.showMargins) {
-    const mx = Math.min(model.marginX, model.canvasWidth / 2 - 1), my = Math.min(model.marginY, model.canvasHeight / 2 - 1);
-    context.strokeStyle = 'rgba(255,255,255,.42)'; context.setLineDash([6, 6]); context.strokeRect(mx, my, Math.max(1, model.canvasWidth - mx * 2), Math.max(1, model.canvasHeight - my * 2)); context.setLineDash([]);
-  }
-  context.restore();
-}
-function renderFrame(t, targetCtx = ctx, width = canvas.width, height = canvas.height, options = {}) {
-  const total = durationMs(), globalMs = clamp(t, 0, 1) * total;
-  targetCtx.save(); targetCtx.clearRect(0, 0, width, height); targetCtx.scale(width / model.canvasWidth, height / model.canvasHeight);
-  if (!options.transparent) { targetCtx.fillStyle = model.bgColor; targetCtx.fillRect(0, 0, model.canvasWidth, model.canvasHeight); }
-  const textState = resolvedTextState(targetCtx), layout = lockupLayout(targetCtx, textState);
-  const logoMotion = motionState('logo', globalMs);
-  if (logoImage && logoMotion.alpha > .001) {
-    targetCtx.save(); targetCtx.globalAlpha = clamp(logoMotion.alpha, 0, 1); targetCtx.translate(layout.logoX + logoMotion.x, layout.logoY + logoMotion.y); targetCtx.scale(logoMotion.scale, logoMotion.scale); targetCtx.drawImage(logoImage, -layout.logoW / 2, -layout.logoH / 2, layout.logoW, layout.logoH); targetCtx.restore();
-  }
-  const words = textWordLayout(targetCtx, textState.headline, textState);
-  let wordX = textState.textAlign === 'left' ? layout.textX : textState.textAlign === 'right' ? layout.textX - words.totalWidth : layout.textX - words.totalWidth / 2;
-  words.words.forEach((word, i) => {
-    const motion = motionState('text', globalMs, i, words.words.length);
-    targetCtx.save(); targetCtx.globalAlpha = clamp(motion.alpha, 0, 1); targetCtx.fillStyle = textState.textColor;
-    const center = wordX + words.widths[i] / 2; targetCtx.translate(center + motion.x, layout.textY + motion.y); targetCtx.scale(motion.scale, motion.scale); targetCtx.translate(-center, -layout.textY); drawWord(targetCtx, word, wordX, layout.textY, textState); targetCtx.restore();
-    wordX += words.widths[i] + words.space;
-  });
-  if (!options.hideGuides) drawGuides(targetCtx);
-  targetCtx.restore();
-}
+function applyCanvasSize(){canvas.width=model.canvasWidth;canvas.height=model.canvasHeight;$('canvasReadout').textContent=`${model.canvasWidth} × ${model.canvasHeight}`;syncViewport();renderFrame(playhead);}
+function syncViewport(){const z=model.viewportZoom;$('viewportZoom').value=String(z);$('fitBtn').classList.toggle('active',z==='fit');if(z==='fit'){canvas.style.width='';canvas.style.height='';canvas.style.maxWidth='';canvas.style.maxHeight='';$('stageShell').classList.remove('manual-zoom');}else{const scale=clamp(num(z,1),.25,2);canvas.style.width=`${model.canvasWidth*scale}px`;canvas.style.height=`${model.canvasHeight*scale}px`;canvas.style.maxWidth='none';canvas.style.maxHeight='none';$('stageShell').classList.add('manual-zoom');}$('viewportGridBtn').classList.toggle('active',model.showGrid);$('viewportSafeBtn').classList.toggle('active',model.showMargins);}
+function formatTime(ms){return`${(ms/1000).toFixed(2).replace(/\.00$/,'')}s`;}
+function syncTimeUI(){const total=durationMs();$('totalTimeReadout').value=`${(total/1000).toFixed(2)} s`;$('timelineStatus').textContent=formatTime(total);$('timelineRuler').innerHTML=[0,.25,.5,.75,1].map((p)=>`<span>${formatTime(total*p)}</span>`).join('');$('frameEstimate').textContent=String(Math.max(2,Math.min(360,Math.round(total/1000*model.fps))));$('outputSizeReadout').textContent=`${Math.round(model.canvasWidth*model.exportScale)} × ${Math.round(model.canvasHeight*model.exportScale)}`;}
+function layerIcon(l){return l.type==='logo'?'◈':l.type==='text'?'T':'◎';}
+function layerTimeLabel(l){const ends=[];if(isVisualLayer(l))ends.push(lifecycleEnd(l));if(l.position.enabled)ends.push(positionEnd(l));const end=Math.max(...ends,0);if(!end)return'Static';const starts=[];if(isVisualLayer(l))starts.push(l.start);if(l.position.enabled)starts.push(l.position.start);return`${formatTime(Math.min(...starts))}–${formatTime(end)}`;}
+function escapeHtml(value){return String(value??'').replace(/[&<>'"]/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
+function lifecycleBarHtml(id,l,total){const phases=phaseDurations(l),phaseTotal=Math.max(1,phases.reduce((a,b)=>a+b,0)),left=l.start/total*100,width=phaseTotal/total*100,p0=phases[0]/phaseTotal*100,p1=phases[1]/phaseTotal*100,p2=phases[2]/phaseTotal*100,showEnter=['in-hold-out','in-out'].includes(l.mode),showHold=l.mode==='in-hold-out';return`<div class="timing-bar" data-bar="${id}" style="left:${left}%;width:${width}%"><button class="timing-handle start" type="button"></button><div class="phase-strip"><span class="phase enter" style="width:${p0}%"></span><span class="phase hold" style="width:${p1}%"></span><span class="phase exit" style="width:${p2}%"></span></div>${showEnter?`<button class="phase-handle enter-end" type="button" style="left:${p0}%"></button>`:''}${showHold?`<button class="phase-handle exit-start" type="button" style="left:${p0+p1}%"></button>`:''}<span class="timing-bar-body"><span>Enter</span><span>Hold</span><span>Exit</span></span><button class="timing-handle end" type="button"></button></div>`;}
+function positionClipHtml(id,p,total){const left=p.start/total*100,width=Math.max(.3,p.duration/total*100);return`<div class="position-clip" data-position-clip="${id}" style="left:${left}%;width:${width}%"><button class="position-keyframe a" type="button"></button><span class="position-line"></span><button class="position-keyframe b" type="button"></button></div>`;}
+function renderLayerRows(){const ids=layerIds();$('layerTree').style.gridTemplateRows=`repeat(${ids.length+1},48px)`;$('timeline').style.gridTemplateRows=`repeat(${ids.length+1},48px)`;$('layerTree').innerHTML=ids.map((id)=>{const l=model.layers[id],parent=l.parentId?model.layers[l.parentId]?.name:'';return`<button type="button" class="layer-row ${id===selectedLayer?'selected':''} ${l.type==='null'?'null-row':''}" data-layer-select="${id}"><span class="layer-icon">${layerIcon(l)}</span><span class="layer-copy"><strong>${escapeHtml(l.name)}</strong>${parent?`<em>↳ ${escapeHtml(parent)}</em>`:''}</span><small>${layerTimeLabel(l)}</small></button>`;}).join('')+'<div class="layer-row static"><span class="layer-icon">▣</span><span class="layer-copy"><strong>Background</strong></span><small>Static</small></div>';const total=durationMs();$('timeline').innerHTML='<div class="timeline-playhead" aria-hidden="true"></div>'+ids.map((id)=>{const l=model.layers[id],life=isVisualLayer(l)?lifecycleBarHtml(id,l,total):'',position=l.position.enabled?positionClipHtml(id,l.position,total):'';return`<div class="timeline-row ${l.type==='null'?'null-timeline-row':''}" data-layer="${id}"><div class="timing-track" data-track="${id}">${life}${position}</div></div>`;}).join('')+'<div class="timeline-row background-row"><div class="static-track"></div></div>';}
+function syncTimeline(){renderLayerRows();updateTimelinePlayhead();syncTimeUI();}
+function updateTimelinePlayhead(){const track=document.querySelector('.timing-track'),line=document.querySelector('.timeline-playhead');if(!track||!line)return;const tr=$('timeline').getBoundingClientRect(),rr=track.getBoundingClientRect();line.style.left=`${rr.left-tr.left+rr.width*playhead}px`;}
 
-function aspectFromSvg(svgText) {
-  const m = svgText.match(/viewBox=["']\s*[-\d.]+\s+[-\d.]+\s+([\d.]+)\s+([\d.]+)["']/i); if (!m) return null;
-  const w = Number(m[1]), h = Number(m[2]); return w > 0 && h > 0 ? h / w : null;
-}
-function colorizeSvg(svgText, color) { return svgText.replace(/<svg([^>]*)>/i, (m) => `${m}<style>path,rect,circle,polygon,ellipse{fill:${color} !important;}</style>`); }
-async function loadBuiltInLogo(type = model.logoType) {
-  if (type === 'custom') { if (customLogo) logoImage = customLogo; renderFrame(playhead); return; }
-  const token = ++logoToken;
-  try {
-    const res = await fetch(LOGOS[type] || LOGOS.wordmark); if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const source = await res.text(), parsedAspect = aspectFromSvg(source), blob = new Blob([colorizeSvg(source, model.logoColor)], { type: 'image/svg+xml' }), url = URL.createObjectURL(blob), image = new Image();
-    await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = reject; image.src = url; });
-    if (token !== logoToken) { URL.revokeObjectURL(url); return; }
-    if (logoObjectUrl) URL.revokeObjectURL(logoObjectUrl); logoObjectUrl = url; logoImage = image; logoAspect = parsedAspect || image.naturalHeight / Math.max(1, image.naturalWidth); renderFrame(playhead);
-  } catch (error) { $('status').textContent = `Logo load failed: ${error.message || error}`; }
-}
-async function loadGoogleFont() {
-  const family = model.fontFamily.trim() || 'Anton', token = ++fontToken;
-  $('fontStatus').textContent = `Loading ${family}…`;
-  $('googleFontStylesheet').href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family).replace(/%20/g, '+')}&display=swap`;
-  try { if (document.fonts) { await document.fonts.load(`${model.fontWeight} 48px "${family}"`); await document.fonts.ready; } if (token !== fontToken) return; $('fontStatus').textContent = `${family} loaded from Google Fonts.`; renderFrame(playhead); }
-  catch { if (token !== fontToken) return; $('fontStatus').textContent = `Could not confirm ${family}; fallback may be shown.`; }
-}
+function wouldCreateCycle(layerId,parentId){let current=parentId,guard=0;while(current&&guard++<100){if(current===layerId)return true;current=model.layers[current]?.parentId||null;}return false;}
+function syncParentOptions(){const l=selectedMotion(),options=['<option value="">None</option>'];layerIds().forEach((id)=>{const candidate=model.layers[id];if(candidate.type!=='null'||id===selectedLayer||wouldCreateCycle(selectedLayer,id))return;options.push(`<option value="${id}">${escapeHtml(candidate.name)}</option>`);});$('parentLayer').innerHTML=options.join('');$('parentLayer').value=l.parentId||'';}
+function currentCurve(){const l=selectedMotion();if(selectedCurve==='position'||!isVisualLayer(l))return l.position.curve;return selectedCurve==='enter'?l.enterBezier:l.exitBezier;}
+function setCurrentCurve(curve){const safe=curve.map(Number),l=selectedMotion();if(selectedCurve==='position'||!isVisualLayer(l))l.position.curve=[...safe];else if(selectedCurve==='enter')l.enterBezier=[...safe];else l.exitBezier=[...safe];}
+function syncCurvePresetOptions(){const current=currentCurve(),items=['<option value="custom">Custom</option>','<optgroup label="Built-in">'];Object.entries(BUILTIN_CURVES).forEach(([id,e])=>items.push(`<option value="builtin:${id}">${e.name}</option>`));items.push('</optgroup>');const custom=Object.entries(model.curvePresets||{});if(custom.length){items.push('<optgroup label="My curves">');custom.forEach(([id,e])=>items.push(`<option value="user:${id}">${escapeHtml(e.name||id)}</option>`));items.push('</optgroup>');}$('curvePreset').innerHTML=items.join('');let value='custom';for(const[id,e]of Object.entries(BUILTIN_CURVES))if(curvesEqual(current,e.curve))value=`builtin:${id}`;for(const[id,e]of custom)if(curvesEqual(current,e.curve))value=`user:${id}`;$('curvePreset').value=value;$('deleteCurvePresetBtn').disabled=!value.startsWith('user:');}
+function syncCurveUI(){const l=selectedMotion();if(!isVisualLayer(l)&&selectedCurve!=='position')selectedCurve='position';$('curveTarget').value=selectedCurve;[...$('curveTarget').options].forEach((o)=>{if(o.value!=='position')o.disabled=!isVisualLayer(l);});const curve=currentCurve();[$('x1').value,$('y1').value,$('x2').value,$('y2').value]=curve.map(String);syncCurvePresetOptions();updateCurveViz();}
+function updateCurveViz(){const[x1,y1,x2,y2]=currentCurve(),left=20,right=240,top=20,bottom=150,sx=(x)=>left+x*(right-left),sy=(y)=>bottom-((y+.25)/1.5)*(bottom-top),start=[sx(0),sy(0)],p1=[sx(x1),sy(y1)],p2=[sx(x2),sy(y2)],end=[sx(1),sy(1)];$('curvePath').setAttribute('d',`M${start[0]} ${start[1]} C${p1[0]} ${p1[1]} ${p2[0]} ${p2[1]} ${end[0]} ${end[1]}`);$('guide1').setAttribute('d',`M${start[0]} ${start[1]} L${p1[0]} ${p1[1]}`);$('guide2').setAttribute('d',`M${end[0]} ${end[1]} L${p2[0]} ${p2[1]}`);$('handle1').setAttribute('cx',p1[0]);$('handle1').setAttribute('cy',p1[1]);$('handle2').setAttribute('cx',p2[0]);$('handle2').setAttribute('cy',p2[1]);}
+function syncMotionPanel(){const l=selectedMotion(),p=l.position;$('motionLayerLabel').textContent=`${l.name} · ${l.type==='null'?'Null':l.type==='logo'?'Logo':'Text'}`;$('layerTypeBadge').textContent=l.type==='null'?'Null':l.type==='logo'?'Logo':'Text';$('layerTypeBadge').className=`type-badge ${l.type}`;$('layerName').value=l.name;$('deleteLayerBtn').hidden=l.type!=='null';syncParentOptions();$('lifecycleControls').hidden=!isVisualLayer(l);$('staggerControl').hidden=l.type!=='text';if(isVisualLayer(l)){$('layerStart').value=Math.round(l.start);$('flowMode').value=l.mode;$('enterDuration').value=Math.round(l.enter);$('holdDuration').value=Math.round(l.hold);$('exitDuration').value=Math.round(l.exit);$('enterDirection').value=l.enterDirection;$('exitDirection').value=l.exitDirection;$('layerTravel').value=l.travel;$('layerScale').value=l.scale;$('wordStagger').value=l.stagger;$('wordStaggerOut').value=`${Math.round(l.stagger)} ms`;}$('positionEnabled').checked=Boolean(p.enabled);$('positionStart').value=Math.round(p.start);$('positionDuration').value=Math.round(p.duration);$('positionFromX').value=p.from.x;$('positionFromY').value=p.from.y;$('positionToX').value=p.to.x;$('positionToY').value=p.to.y;syncCurveUI();}
+function syncForm(){const ids=['headline','fontFamily','fontSize','fontWeight','letterSpacing','wordSpacing','textAlign','textTransform','textColor','position','gap','alignment','verticalAlignment','offsetX','offsetY','logoOffsetX','logoOffsetY','textOffsetX','textOffsetY','logoSize','logoColor','canvasWidth','canvasHeight','bgColor','marginX','marginY','fps','exportScale','gifColors','playbackRate'];ids.forEach((id)=>{if($(id))$(id).value=String(model[id]);});['autoFit','showMargins','showGrid','gifLoop'].forEach((id)=>{$(id).checked=Boolean(model[id]);});document.querySelectorAll('[data-logo-type]').forEach((b)=>b.classList.toggle('active',b.dataset.logoType===model.logoType));$('loopBtn').classList.toggle('active',model.previewLoop);$('loopBtn').setAttribute('aria-pressed',String(model.previewLoop));$('snapBtn').classList.toggle('active',model.snap);$('snapBtn').setAttribute('aria-pressed',String(model.snap));syncMotionPanel();}
+function syncAll({reloadLogo=false,reloadFont=false}={}){syncForm();applyCanvasSize();syncTimeline();syncViewport();syncPlayhead();if(reloadLogo)loadBuiltInLogo(model.logoType);if(reloadFont)loadGoogleFont();}
 
-function applyCanvasSize() { canvas.width = model.canvasWidth; canvas.height = model.canvasHeight; $('canvasReadout').textContent = `${model.canvasWidth} × ${model.canvasHeight}`; syncViewport(); renderFrame(playhead); }
-function syncViewport() {
-  const z = model.viewportZoom; $('viewportZoom').value = String(z); $('fitBtn').classList.toggle('active', z === 'fit');
-  if (z === 'fit') { canvas.style.width = ''; canvas.style.height = ''; canvas.style.maxWidth = ''; canvas.style.maxHeight = ''; $('stageShell').classList.remove('manual-zoom'); }
-  else { const scale = clamp(num(z, 1), .25, 2); canvas.style.width = `${model.canvasWidth * scale}px`; canvas.style.height = `${model.canvasHeight * scale}px`; canvas.style.maxWidth = 'none'; canvas.style.maxHeight = 'none'; $('stageShell').classList.add('manual-zoom'); }
-  $('viewportGridBtn').classList.toggle('active', model.showGrid); $('viewportSafeBtn').classList.toggle('active', model.showMargins);
-}
-function formatTime(ms) { return `${(ms / 1000).toFixed(2).replace(/\.00$/, '')}s`; }
-function syncTimeUI() {
-  const total = durationMs();
-  $('totalTimeReadout').value = `${(total / 1000).toFixed(2)} s`; $('timelineStatus').textContent = formatTime(total);
-  $('timelineRuler').innerHTML = [0, .25, .5, .75, 1].map((p) => `<span>${formatTime(total * p)}</span>`).join('');
-  $('frameEstimate').textContent = String(Math.max(2, Math.min(300, Math.round(total / 1000 * model.fps))));
-  $('outputSizeReadout').textContent = `${Math.round(model.canvasWidth * model.exportScale)} × ${Math.round(model.canvasHeight * model.exportScale)}`;
-}
-function syncTimeline() {
-  const total = durationMs();
-  for (const layer of ['logo', 'text']) {
-    const l = model.layers[layer], bar = document.querySelector(`[data-bar="${layer}"]`), phases = phaseDurations(layer), phaseTotal = Math.max(1, phases.reduce((a, b) => a + b, 0));
-    bar.style.left = `${l.start / total * 100}%`; bar.style.width = `${phaseTotal / total * 100}%`;
-    const phaseEls = bar.querySelectorAll('.phase');
-    phaseEls[0].style.width = `${phases[0] / phaseTotal * 100}%`; phaseEls[1].style.width = `${phases[1] / phaseTotal * 100}%`; phaseEls[2].style.width = `${phases[2] / phaseTotal * 100}%`;
-    const enterHandle = bar.querySelector('.phase-handle.enter-end'), exitHandle = bar.querySelector('.phase-handle.exit-start');
-    enterHandle.style.left = `${phases[0] / phaseTotal * 100}%`; exitHandle.style.left = `${(phases[0] + phases[1]) / phaseTotal * 100}%`;
-    enterHandle.hidden = !['in-hold-out', 'in-out'].includes(l.mode); exitHandle.hidden = l.mode !== 'in-hold-out';
-    $(`${layer}LayerTime`).textContent = `${formatTime(l.start)}–${formatTime(layerEnd(layer))}`;
-  }
-  updateTimelinePlayhead(); syncTimeUI();
-}
-function updateTimelinePlayhead() {
-  const track = document.querySelector('.timing-track'), line = document.querySelector('.timeline-playhead'); if (!track || !line) return;
-  const tr = $('timeline').getBoundingClientRect(), rr = track.getBoundingClientRect(); line.style.left = `${rr.left - tr.left + rr.width * playhead}px`;
-}
+function setPlayButton(){const span=$('playBtn').querySelector('span');if(span)span.textContent=isPlaying?'Pause':'Play';$('playBtn').classList.toggle('playing',isPlaying);}
+function syncPlayhead(){$('scrubber').value=String(playhead);$('timeReadout').value=`${(playhead*durationMs()/1000).toFixed(2)} s`;renderFrame(playhead);updateTimelinePlayhead();}
+function pause(){isPlaying=false;if(rafId)cancelAnimationFrame(rafId);rafId=null;playbackOffsetMs=playhead*durationMs();setPlayButton();}
+function tick(now){if(!isPlaying)return;const total=durationMs(),elapsed=(now-playbackStartedAt)*model.playbackRate+playbackOffsetMs;playhead=model.previewLoop?(elapsed%total)/total:clamp(elapsed/total,0,1);syncPlayhead();if(!model.previewLoop&&playhead>=1){pause();return;}rafId=requestAnimationFrame(tick);}
+function play(){if(isPlaying){pause();return;}if(playhead>=1)playhead=0;playbackOffsetMs=playhead*durationMs();playbackStartedAt=performance.now();isPlaying=true;setPlayButton();rafId=requestAnimationFrame(tick);}
+function restart(){pause();playhead=0;playbackOffsetMs=0;syncPlayhead();}
+function stepFrame(dir){pause();const frames=Math.max(2,Math.round(durationMs()/1000*model.fps));playhead=clamp(playhead+dir/Math.max(1,frames-1),0,1);playbackOffsetMs=playhead*durationMs();syncPlayhead();}
+function snapMs(ms){if(!model.snap)return ms;return Math.round(ms/(1000/Math.max(1,model.fps)))*(1000/Math.max(1,model.fps));}
+function minFrameMs(){return 1000/Math.max(1,model.fps);}
 
-function selectedMotion() { return model.layers[selectedLayer]; }
-function syncMotionPanel() {
-  const l = selectedMotion();
-  $('motionLayerLabel').textContent = `${selectedLayer === 'logo' ? 'Logo' : 'Text'} layer`;
-  $('motionLayerLogo').classList.toggle('active', selectedLayer === 'logo'); $('motionLayerText').classList.toggle('active', selectedLayer === 'text');
-  $('layerStart').value = Math.round(l.start); $('flowMode').value = l.mode; $('enterDuration').value = Math.round(l.enter); $('holdDuration').value = Math.round(l.hold); $('exitDuration').value = Math.round(l.exit);
-  $('enterDirection').value = l.enterDirection; $('exitDirection').value = l.exitDirection; $('layerTravel').value = l.travel; $('layerScale').value = l.scale; $('wordStagger').value = l.stagger; $('wordStaggerOut').value = `${Math.round(l.stagger)} ms`; $('staggerControl').hidden = selectedLayer !== 'text';
-  syncCurveUI();
-  document.querySelectorAll('[data-layer-select]').forEach((row) => row.classList.toggle('selected', row.dataset.layerSelect === selectedLayer));
-}
-function syncCurveUI() {
-  const curve = selectedCurve === 'enter' ? selectedMotion().enterBezier : selectedMotion().exitBezier;
-  [$('x1').value, $('y1').value, $('x2').value, $('y2').value] = curve.map(String); $('curveTarget').value = selectedCurve;
-  const match = Object.entries(CURVE_PRESETS).find(([, v]) => v.every((n, i) => Math.abs(n - curve[i]) < .0001)); $('curvePreset').value = match ? match[0] : 'custom'; updateCurveViz();
-}
-function updateCurveViz() {
-  const [x1, y1, x2, y2] = selectedCurve === 'enter' ? selectedMotion().enterBezier : selectedMotion().exitBezier;
-  const left = 20, right = 240, top = 20, bottom = 150, sx = (x) => left + x * (right - left), sy = (y) => bottom - ((y + .25) / 1.5) * (bottom - top);
-  const start = [sx(0), sy(0)], p1 = [sx(x1), sy(y1)], p2 = [sx(x2), sy(y2)], end = [sx(1), sy(1)];
-  $('curvePath').setAttribute('d', `M${start[0]} ${start[1]} C${p1[0]} ${p1[1]} ${p2[0]} ${p2[1]} ${end[0]} ${end[1]}`); $('guide1').setAttribute('d', `M${start[0]} ${start[1]} L${p1[0]} ${p1[1]}`); $('guide2').setAttribute('d', `M${end[0]} ${end[1]} L${p2[0]} ${p2[1]}`); $('handle1').setAttribute('cx', p1[0]); $('handle1').setAttribute('cy', p1[1]); $('handle2').setAttribute('cx', p2[0]); $('handle2').setAttribute('cy', p2[1]);
-}
-function syncForm() {
-  const ids = ['headline','fontFamily','fontSize','fontWeight','letterSpacing','wordSpacing','textAlign','textTransform','textColor','position','gap','alignment','verticalAlignment','offsetX','offsetY','logoOffsetX','logoOffsetY','textOffsetX','textOffsetY','logoSize','logoColor','canvasWidth','canvasHeight','bgColor','marginX','marginY','fps','exportScale','gifColors','playbackRate'];
-  ids.forEach((id) => { if ($(id)) $(id).value = String(model[id]); });
-  ['autoFit','showMargins','showGrid','gifLoop'].forEach((id) => { $(id).checked = Boolean(model[id]); });
-  document.querySelectorAll('[data-logo-type]').forEach((b) => b.classList.toggle('active', b.dataset.logoType === model.logoType));
-  $('loopBtn').classList.toggle('active', model.previewLoop); $('loopBtn').setAttribute('aria-pressed', String(model.previewLoop)); $('snapBtn').classList.toggle('active', model.snap); $('snapBtn').setAttribute('aria-pressed', String(model.snap));
-  syncMotionPanel();
-}
-function syncAll({ reloadLogo = false, reloadFont = false } = {}) { syncForm(); applyCanvasSize(); syncTimeline(); syncViewport(); syncPlayhead(); if (reloadLogo) loadBuiltInLogo(model.logoType); if (reloadFont) loadGoogleFont(); }
+function bindBaseInput(id,key=id,{numeric=false,checkbox=false,after}={}){const el=$(id);if(!el)return;const update=()=>{model[key]=checkbox?el.checked:numeric?num(el.value,model[key]):el.value;if(after)after();else{syncTimeline();renderFrame(playhead);}scheduleSave();};el.addEventListener('input',update);el.addEventListener('change',()=>{update();commitHistory();});}
+function setupBaseBindings(){['headline','fontFamily','textAlign','textTransform','textColor','position','alignment','verticalAlignment','bgColor'].forEach((id)=>bindBaseInput(id));['fontSize','fontWeight','letterSpacing','wordSpacing','gap','offsetX','offsetY','logoOffsetX','logoOffsetY','textOffsetX','textOffsetY','logoSize','marginX','marginY','fps'].forEach((id)=>bindBaseInput(id,id,{numeric:true}));['autoFit','showMargins','showGrid'].forEach((id)=>bindBaseInput(id,id,{checkbox:true,after:()=>{syncViewport();renderFrame(playhead);}}));bindBaseInput('exportScale','exportScale',{numeric:true,after:syncTimeUI});bindBaseInput('gifColors','gifColors',{numeric:true,after:syncTimeUI});bindBaseInput('gifLoop','gifLoop',{checkbox:true,after:syncTimeUI});bindBaseInput('playbackRate','playbackRate',{numeric:true,after:()=>{if(isPlaying){playbackOffsetMs=playhead*durationMs();playbackStartedAt=performance.now();}}});$('fontWeight').addEventListener('change',loadGoogleFont);$('loadFontBtn').addEventListener('click',()=>{model.fontFamily=$('fontFamily').value.trim()||'Anton';loadGoogleFont();commitHistory();});$('fontFamily').addEventListener('keydown',(e)=>{if(e.key==='Enter'){e.preventDefault();$('loadFontBtn').click();}});$('logoColor').addEventListener('input',()=>{model.logoColor=$('logoColor').value;if(model.logoType!=='custom')loadBuiltInLogo(model.logoType);});$('logoColor').addEventListener('change',commitHistory);document.querySelectorAll('[data-logo-type]').forEach((button)=>button.addEventListener('click',()=>{model.logoType=button.dataset.logoType;document.querySelectorAll('[data-logo-type]').forEach((b)=>b.classList.toggle('active',b===button));loadBuiltInLogo(model.logoType);commitHistory();}));$('logoFile').addEventListener('change',async()=>{const file=$('logoFile').files?.[0];if(!file)return;let uploadedAspect=null;if(file.type==='image/svg+xml'||file.name.toLowerCase().endsWith('.svg')){try{uploadedAspect=aspectFromSvg(await file.text());}catch{}}const url=URL.createObjectURL(file),image=new Image();image.onload=()=>{customLogo=image;logoImage=image;logoAspect=uploadedAspect||image.naturalHeight/Math.max(1,image.naturalWidth);model.logoType='custom';if(logoObjectUrl)URL.revokeObjectURL(logoObjectUrl);logoObjectUrl=url;document.querySelectorAll('[data-logo-type]').forEach((b)=>b.classList.remove('active'));renderFrame(playhead);commitHistory();};image.onerror=()=>{URL.revokeObjectURL(url);$('status').textContent='Could not read that logo file.';};image.src=url;});}
 
-function setPlayButton() { const span = $('playBtn').querySelector('span'); if (span) span.textContent = isPlaying ? 'Pause' : 'Play'; $('playBtn').classList.toggle('playing', isPlaying); }
-function syncPlayhead() { $('scrubber').value = String(playhead); $('timeReadout').value = `${(playhead * durationMs() / 1000).toFixed(2)} s`; renderFrame(playhead); updateTimelinePlayhead(); }
-function pause() { isPlaying = false; if (rafId) cancelAnimationFrame(rafId); rafId = null; playbackOffsetMs = playhead * durationMs(); setPlayButton(); }
-function tick(now) {
-  if (!isPlaying) return; const total = durationMs(), elapsed = (now - playbackStartedAt) * model.playbackRate + playbackOffsetMs;
-  playhead = model.previewLoop ? (elapsed % total) / total : clamp(elapsed / total, 0, 1); syncPlayhead(); if (!model.previewLoop && playhead >= 1) { pause(); return; } rafId = requestAnimationFrame(tick);
-}
-function play() { if (isPlaying) { pause(); return; } if (playhead >= 1) playhead = 0; playbackOffsetMs = playhead * durationMs(); playbackStartedAt = performance.now(); isPlaying = true; setPlayButton(); rafId = requestAnimationFrame(tick); }
-function restart() { pause(); playhead = 0; playbackOffsetMs = 0; syncPlayhead(); }
-function stepFrame(dir) { pause(); const frames = Math.max(2, Math.round(durationMs() / 1000 * model.fps)); playhead = clamp(playhead + dir / Math.max(1, frames - 1), 0, 1); playbackOffsetMs = playhead * durationMs(); syncPlayhead(); }
-function snapMs(ms) { if (!model.snap) return ms; return Math.round(ms / (1000 / Math.max(1, model.fps))) * (1000 / Math.max(1, model.fps)); }
+function selectLayer(id,openMotion=false){if(!model.layers[id])return;selectedLayer=id;if(model.layers[id].type==='null')selectedCurve='position';syncMotionPanel();syncTimeline();renderFrame(playhead);if(openMotion)document.querySelector('.tab[data-tab="motion"]')?.click();}
+function setupLayerControls(){$('layerTree').addEventListener('click',(e)=>{const row=e.target.closest('[data-layer-select]');if(row)selectLayer(row.dataset.layerSelect,true);});$('addNullBtn').addEventListener('click',()=>{let id;do{id=`null-${model.nextNullId++}`;}while(model.layers[id]);const count=Object.values(model.layers).filter((l)=>l.type==='null').length+1;model.layers[id]=nullLayerDefaults(id,`Null ${count}`);model.layerOrder.unshift(id);selectedLayer=id;selectedCurve='position';syncAll();document.querySelector('.tab[data-tab="motion"]')?.click();commitHistory();});$('deleteLayerBtn').addEventListener('click',()=>{const l=selectedMotion();if(l.type!=='null')return;const id=selectedLayer;Object.values(model.layers).forEach((child)=>{if(child.parentId===id)child.parentId=null;});delete model.layers[id];model.layerOrder=model.layerOrder.filter((x)=>x!==id);selectedLayer='logo';selectedCurve='position';syncAll();commitHistory();});$('layerName').addEventListener('input',()=>{selectedMotion().name=$('layerName').value.trimStart().slice(0,40)||(selectedMotion().type==='null'?'Null':selectedMotion().type==='logo'?'Logo':'Text');syncTimeline();scheduleSave();});$('layerName').addEventListener('change',commitHistory);$('parentLayer').addEventListener('change',()=>{const parentId=$('parentLayer').value||null;if(parentId&&wouldCreateCycle(selectedLayer,parentId))return;selectedMotion().parentId=parentId;syncTimeline();renderFrame(playhead);commitHistory();});}
+function setupMotionBindings(){const bind=(id,getter,setter,{numeric=false,checkbox=false,after}={})=>{const el=$(id),update=()=>{setter(checkbox?el.checked:numeric?num(el.value,getter()):el.value);if(after)after();else{syncTimeline();renderFrame(playhead);}scheduleSave();};el.addEventListener('input',update);el.addEventListener('change',()=>{update();commitHistory();});};bind('layerStart',()=>selectedMotion().start,(v)=>selectedMotion().start=Math.max(0,snapMs(v)),{numeric:true,after:()=>{syncMotionPanel();syncTimeline();syncPlayhead();}});bind('flowMode',()=>selectedMotion().mode,(v)=>selectedMotion().mode=v,{after:()=>{syncTimeline();syncPlayhead();}});['enter','hold','exit'].forEach((prop)=>bind(`${prop}Duration`,()=>selectedMotion()[prop],(v)=>selectedMotion()[prop]=Math.max(0,snapMs(v)),{numeric:true,after:()=>{syncMotionPanel();syncTimeline();syncPlayhead();}}));bind('enterDirection',()=>selectedMotion().enterDirection,(v)=>selectedMotion().enterDirection=v);bind('exitDirection',()=>selectedMotion().exitDirection,(v)=>selectedMotion().exitDirection=v);bind('layerTravel',()=>selectedMotion().travel,(v)=>selectedMotion().travel=v,{numeric:true});bind('layerScale',()=>selectedMotion().scale,(v)=>selectedMotion().scale=v,{numeric:true});bind('wordStagger',()=>selectedMotion().stagger,(v)=>selectedMotion().stagger=v,{numeric:true,after:()=>{$('wordStaggerOut').value=`${Math.round(selectedMotion().stagger)} ms`;renderFrame(playhead);}});bind('positionEnabled',()=>selectedMotion().position.enabled,(v)=>selectedMotion().position.enabled=v,{checkbox:true,after:()=>{syncTimeline();syncPlayhead();}});bind('positionStart',()=>selectedMotion().position.start,(v)=>selectedMotion().position.start=Math.max(0,snapMs(v)),{numeric:true,after:()=>{syncMotionPanel();syncTimeline();syncPlayhead();}});bind('positionDuration',()=>selectedMotion().position.duration,(v)=>selectedMotion().position.duration=Math.max(minFrameMs(),snapMs(v)),{numeric:true,after:()=>{syncMotionPanel();syncTimeline();syncPlayhead();}});bind('positionFromX',()=>selectedMotion().position.from.x,(v)=>selectedMotion().position.from.x=v,{numeric:true});bind('positionFromY',()=>selectedMotion().position.from.y,(v)=>selectedMotion().position.from.y=v,{numeric:true});bind('positionToX',()=>selectedMotion().position.to.x,(v)=>selectedMotion().position.to.x=v,{numeric:true});bind('positionToY',()=>selectedMotion().position.to.y,(v)=>selectedMotion().position.to.y=v,{numeric:true});$('swapPositionBtn').addEventListener('click',()=>{const p=selectedMotion().position,temp=p.from;p.from=p.to;p.to=temp;syncMotionPanel();renderFrame(playhead);commitHistory();});$('zeroPositionBtn').addEventListener('click',()=>{const p=selectedMotion().position;p.from={x:0,y:0};p.to={x:0,y:0};syncMotionPanel();renderFrame(playhead);commitHistory();});document.querySelectorAll('[data-motion-preset]').forEach((button)=>button.addEventListener('click',()=>{const p=MOTION_PRESETS[button.dataset.motionPreset],l=selectedMotion();if(!p||!isVisualLayer(l))return;l.enter=p.enter;l.hold=p.hold;l.exit=p.exit;l.travel=p.travel;l.scale=p.scale;if(l.type==='text')l.stagger=p.stagger;l.enterBezier=[...p.enterBezier];l.exitBezier=[...p.exitBezier];syncMotionPanel();syncTimeline();syncPlayhead();commitHistory();}));}
 
-function bindBaseInput(id, key = id, { numeric = false, checkbox = false, after } = {}) {
-  const el = $(id); if (!el) return;
-  const update = () => { model[key] = checkbox ? el.checked : numeric ? num(el.value, model[key]) : el.value; if (after) after(); else { syncTimeline(); renderFrame(playhead); } scheduleSave(); };
-  el.addEventListener('input', update); el.addEventListener('change', () => { update(); commitHistory(); });
-}
-function setupBaseBindings() {
-  ['headline','fontFamily','textAlign','textTransform','textColor','position','alignment','verticalAlignment','bgColor'].forEach((id) => bindBaseInput(id));
-  ['fontSize','fontWeight','letterSpacing','wordSpacing','gap','offsetX','offsetY','logoOffsetX','logoOffsetY','textOffsetX','textOffsetY','logoSize','marginX','marginY','fps'].forEach((id) => bindBaseInput(id, id, { numeric: true }));
-  ['autoFit','showMargins','showGrid'].forEach((id) => bindBaseInput(id, id, { checkbox: true, after: () => { syncViewport(); renderFrame(playhead); } }));
-  bindBaseInput('exportScale','exportScale',{numeric:true,after:syncTimeUI}); bindBaseInput('gifColors','gifColors',{numeric:true,after:syncTimeUI}); bindBaseInput('gifLoop','gifLoop',{checkbox:true,after:syncTimeUI});
-  bindBaseInput('playbackRate','playbackRate',{numeric:true,after:()=>{ if(isPlaying){playbackOffsetMs=playhead*durationMs();playbackStartedAt=performance.now();}}});
-  $('fontWeight').addEventListener('change', loadGoogleFont); $('loadFontBtn').addEventListener('click', () => { model.fontFamily = $('fontFamily').value.trim() || 'Anton'; loadGoogleFont(); commitHistory(); }); $('fontFamily').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('loadFontBtn').click(); } });
-  $('logoColor').addEventListener('input', () => { model.logoColor = $('logoColor').value; if (model.logoType !== 'custom') loadBuiltInLogo(model.logoType); }); $('logoColor').addEventListener('change', commitHistory);
-  document.querySelectorAll('[data-logo-type]').forEach((button) => button.addEventListener('click', () => { model.logoType = button.dataset.logoType; document.querySelectorAll('[data-logo-type]').forEach((b) => b.classList.toggle('active', b === button)); loadBuiltInLogo(model.logoType); commitHistory(); }));
-  $('logoFile').addEventListener('change', async () => {
-    const file = $('logoFile').files?.[0]; if (!file) return; let uploadedAspect = null;
-    if (file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')) { try { uploadedAspect = aspectFromSvg(await file.text()); } catch {} }
-    const url = URL.createObjectURL(file), image = new Image(); image.onload = () => { customLogo = image; logoImage = image; logoAspect = uploadedAspect || image.naturalHeight / Math.max(1, image.naturalWidth); model.logoType = 'custom'; if (logoObjectUrl) URL.revokeObjectURL(logoObjectUrl); logoObjectUrl = url; document.querySelectorAll('[data-logo-type]').forEach((b) => b.classList.remove('active')); renderFrame(playhead); commitHistory(); }; image.onerror = () => { URL.revokeObjectURL(url); $('status').textContent = 'Could not read that logo file.'; }; image.src = url;
-  });
-}
+function setupCurveEditor(){$('curveTarget').addEventListener('change',()=>{selectedCurve=$('curveTarget').value;syncCurveUI();});$('curvePreset').addEventListener('change',()=>{const value=$('curvePreset').value;let curve=null;if(value.startsWith('builtin:'))curve=BUILTIN_CURVES[value.slice(8)]?.curve;if(value.startsWith('user:'))curve=model.curvePresets[value.slice(5)]?.curve;if(!curve){$('deleteCurvePresetBtn').disabled=true;return;}setCurrentCurve(curve);syncCurveUI();renderFrame(playhead);commitHistory();});$('saveCurvePresetBtn').addEventListener('click',()=>{const name=$('curvePresetName').value.trim();if(!name){$('curvePresetName').focus();return;}const id=`${name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'curve'}-${Date.now().toString(36).slice(-4)}`;model.curvePresets[id]={name:name.slice(0,32),curve:[...currentCurve()]};$('curvePresetName').value='';syncCurvePresetOptions();$('curvePreset').value=`user:${id}`;$('deleteCurvePresetBtn').disabled=false;commitHistory();});$('deleteCurvePresetBtn').addEventListener('click',()=>{const value=$('curvePreset').value;if(!value.startsWith('user:'))return;delete model.curvePresets[value.slice(5)];syncCurvePresetOptions();commitHistory();});const updateFields=()=>{setCurrentCurve([clamp(num($('x1').value,0),0,1),num($('y1').value,.9),clamp(num($('x2').value,0),0,1),num($('y2').value,1)]);syncCurvePresetOptions();updateCurveViz();renderFrame(playhead);scheduleSave();};['x1','y1','x2','y2'].forEach((id)=>{$(id).addEventListener('input',updateFields);$(id).addEventListener('change',()=>{updateFields();commitHistory();});});const toSvgPoint=(event)=>{const matrix=$('curveViz').getScreenCTM();if(!matrix)return null;const point=$('curveViz').createSVGPoint();point.x=event.clientX;point.y=event.clientY;return point.matrixTransform(matrix.inverse());},begin=(which,e)=>{activeDrag={kind:'curve',which};e.target.setPointerCapture?.(e.pointerId);e.preventDefault();};$('handle1').addEventListener('pointerdown',(e)=>begin(1,e));$('handle2').addEventListener('pointerdown',(e)=>begin(2,e));$('curveViz').addEventListener('pointermove',(e)=>{if(activeDrag?.kind!=='curve')return;const p=toSvgPoint(e);if(!p)return;const x=clamp((p.x-20)/220,0,1),y=clamp(((150-p.y)/130)*1.5-.25,-2,3),curve=[...currentCurve()];curve[activeDrag.which===1?0:2]=Number(x.toFixed(2));curve[activeDrag.which===1?1:3]=Number(y.toFixed(2));setCurrentCurve(curve);syncCurveUI();renderFrame(playhead);scheduleSave();});const end=()=>{if(activeDrag?.kind==='curve'){activeDrag=null;commitHistory();}};$('curveViz').addEventListener('pointerup',end);$('curveViz').addEventListener('pointercancel',end);[$('handle1'),$('handle2')].forEach((handle,index)=>handle.addEventListener('keydown',(e)=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();const curve=[...currentCurve()],xi=index?2:0,yi=index?3:1;if(e.key==='ArrowLeft')curve[xi]=clamp(curve[xi]-.01,0,1);if(e.key==='ArrowRight')curve[xi]=clamp(curve[xi]+.01,0,1);if(e.key==='ArrowUp')curve[yi]=clamp(curve[yi]+.05,-2,3);if(e.key==='ArrowDown')curve[yi]=clamp(curve[yi]-.05,-2,3);setCurrentCurve(curve);syncCurveUI();renderFrame(playhead);commitHistory();}));}
 
-function setupMotionBindings() {
-  const selectLayer = (layer) => { selectedLayer = layer; syncMotionPanel(); renderFrame(playhead); };
-  $('motionLayerLogo').addEventListener('click', () => selectLayer('logo')); $('motionLayerText').addEventListener('click', () => selectLayer('text'));
-  document.querySelectorAll('[data-layer-select]').forEach((row) => row.addEventListener('click', () => { selectLayer(row.dataset.layerSelect); document.querySelector('.tab[data-tab="motion"]')?.click(); }));
-  const bind = (id, prop, { numeric = false, after } = {}) => { const el = $(id); const update = () => { selectedMotion()[prop] = numeric ? num(el.value, selectedMotion()[prop]) : el.value; if (after) after(); else { syncTimeline(); renderFrame(playhead); } scheduleSave(); }; el.addEventListener('input', update); el.addEventListener('change', () => { update(); commitHistory(); }); };
-  bind('layerStart','start',{numeric:true,after:()=>{selectedMotion().start=Math.max(0,snapMs(selectedMotion().start));syncMotionPanel();syncTimeline();syncPlayhead();}});
-  bind('flowMode','mode',{after:()=>{syncTimeline();syncPlayhead();}}); bind('enterDuration','enter',{numeric:true,after:()=>{selectedMotion().enter=Math.max(0,snapMs(selectedMotion().enter));syncMotionPanel();syncTimeline();syncPlayhead();}}); bind('holdDuration','hold',{numeric:true,after:()=>{selectedMotion().hold=Math.max(0,snapMs(selectedMotion().hold));syncMotionPanel();syncTimeline();syncPlayhead();}}); bind('exitDuration','exit',{numeric:true,after:()=>{selectedMotion().exit=Math.max(0,snapMs(selectedMotion().exit));syncMotionPanel();syncTimeline();syncPlayhead();}});
-  bind('enterDirection','enterDirection'); bind('exitDirection','exitDirection'); bind('layerTravel','travel',{numeric:true}); bind('layerScale','scale',{numeric:true}); bind('wordStagger','stagger',{numeric:true,after:()=>{$('wordStaggerOut').value=`${Math.round(selectedMotion().stagger)} ms`;renderFrame(playhead);}});
-  document.querySelectorAll('[data-motion-preset]').forEach((button) => button.addEventListener('click', () => { const p = MOTION_PRESETS[button.dataset.motionPreset]; if (!p) return; const l = selectedMotion(); l.enter=p.enter;l.hold=p.hold;l.exit=p.exit;l.travel=p.travel;l.scale=p.scale;if(selectedLayer==='text')l.stagger=p.stagger;l.enterBezier=[...p.enterBezier];l.exitBezier=[...p.exitBezier];syncMotionPanel();syncTimeline();syncPlayhead();commitHistory(); }));
-}
+function setupTimeline(){$('timeline').addEventListener('pointerdown',(event)=>{const posHandle=event.target.closest('.position-keyframe'),posClip=event.target.closest('.position-clip'),phaseHandle=event.target.closest('.phase-handle'),edge=event.target.closest('.timing-handle'),bar=event.target.closest('.timing-bar'),track=event.target.closest('.timing-track');if(!track)return;const layer=posClip?.dataset.positionClip||bar?.dataset.bar||track.dataset.track,l=model.layers[layer],rect=track.getBoundingClientRect(),total0=durationMs();selectLayer(layer,false);if(posClip){const p=l.position;activeDrag={kind:posHandle?(posHandle.classList.contains('a')?'pos-a':'pos-b'):'pos-bar',layer,rect,x0:event.clientX,total0,start0:p.start,duration0:p.duration,end0:p.start+p.duration};}else if(bar){activeDrag={kind:phaseHandle?(phaseHandle.classList.contains('enter-end')?'enter-boundary':'hold-boundary'):edge?(edge.classList.contains('end')?'life-end':'life-start'):'life-bar',layer,rect,x0:event.clientX,total0,start0:l.start,enter0:l.enter,hold0:l.hold,exit0:l.exit};}else{activeDrag={kind:'scrub',layer,rect,total0};pause();playhead=clamp((event.clientX-rect.left)/rect.width,0,1);syncPlayhead();}event.preventDefault();});window.addEventListener('pointermove',(event)=>{if(!activeDrag||activeDrag.kind==='curve')return;const a=activeDrag,l=model.layers[a.layer];if(!l)return;const dx=(event.clientX-a.x0)/Math.max(1,a.rect.width)*a.total0;if(a.kind==='scrub'){playhead=clamp((event.clientX-a.rect.left)/a.rect.width,0,1);syncPlayhead();return;}if(a.kind==='pos-a'){const end=a.end0,newStart=clamp(snapMs(a.start0+dx),0,Math.max(0,end-minFrameMs()));l.position.start=newStart;l.position.duration=Math.max(minFrameMs(),end-newStart);}else if(a.kind==='pos-b'){const newEnd=Math.max(a.start0+minFrameMs(),snapMs(a.end0+dx));l.position.duration=newEnd-a.start0;}else if(a.kind==='pos-bar'){l.position.start=Math.max(0,snapMs(a.start0+dx));}else if(a.kind==='life-bar'||a.kind==='life-start'){l.start=Math.max(0,snapMs(a.start0+dx));}else if(a.kind==='enter-boundary'){const total=a.enter0+a.hold0+a.exit0,boundary=clamp(snapMs(a.enter0+dx),0,Math.max(0,total-a.exit0));l.enter=boundary;l.hold=Math.max(0,total-l.enter-a.exit0);}else if(a.kind==='hold-boundary'){const total=a.enter0+a.hold0+a.exit0,boundary=clamp(snapMs(a.enter0+a.hold0+dx),a.enter0,total);l.hold=Math.max(0,boundary-a.enter0);l.exit=Math.max(0,total-a.enter0-l.hold);}else if(a.kind==='life-end'){l.exit=Math.max(0,snapMs(a.exit0+dx));}syncMotionPanel();syncTimeline();syncPlayhead();scheduleSave();});window.addEventListener('pointerup',()=>{if(activeDrag&&activeDrag.kind!=='curve'){const scrub=activeDrag.kind==='scrub';activeDrag=null;if(!scrub)commitHistory();}});$('timelineRuler').addEventListener('pointerdown',(event)=>{const track=document.querySelector('.timing-track');if(!track)return;const rect=track.getBoundingClientRect();pause();playhead=clamp((event.clientX-rect.left)/Math.max(1,rect.width),0,1);syncPlayhead();});}
 
-function setupCurveEditor() {
-  $('curveTarget').addEventListener('change', () => { selectedCurve = $('curveTarget').value; syncCurveUI(); });
-  $('curvePreset').addEventListener('change', () => { const p = CURVE_PRESETS[$('curvePreset').value]; if (!p) return; selectedMotion()[selectedCurve === 'enter' ? 'enterBezier' : 'exitBezier'] = [...p]; syncCurveUI(); renderFrame(playhead); commitHistory(); });
-  const updateFields = () => { selectedMotion()[selectedCurve === 'enter' ? 'enterBezier' : 'exitBezier'] = [clamp(num($('x1').value, 0), 0, 1), num($('y1').value, .9), clamp(num($('x2').value, 0), 0, 1), num($('y2').value, 1)]; $('curvePreset').value='custom'; updateCurveViz(); renderFrame(playhead); scheduleSave(); };
-  ['x1','y1','x2','y2'].forEach((id) => { $(id).addEventListener('input', updateFields); $(id).addEventListener('change', () => { updateFields(); commitHistory(); }); });
-  const toSvgPoint = (event) => { const matrix = $('curveViz').getScreenCTM(); if (!matrix) return null; const point = $('curveViz').createSVGPoint(); point.x=event.clientX;point.y=event.clientY;return point.matrixTransform(matrix.inverse()); };
-  const begin = (which,e) => { activeDrag={kind:'curve',which,pointerId:e.pointerId}; e.target.setPointerCapture?.(e.pointerId); e.preventDefault(); };
-  $('handle1').addEventListener('pointerdown',(e)=>begin(1,e)); $('handle2').addEventListener('pointerdown',(e)=>begin(2,e));
-  $('curveViz').addEventListener('pointermove',(e)=>{ if(activeDrag?.kind!=='curve')return;const p=toSvgPoint(e);if(!p)return;const x=clamp((p.x-20)/220,0,1),y=clamp(((150-p.y)/130)*1.5-.25,-2,3),curve=[...(selectedCurve==='enter'?selectedMotion().enterBezier:selectedMotion().exitBezier)];curve[activeDrag.which===1?0:2]=Number(x.toFixed(2));curve[activeDrag.which===1?1:3]=Number(y.toFixed(2));selectedMotion()[selectedCurve==='enter'?'enterBezier':'exitBezier']=curve;syncCurveUI();renderFrame(playhead);scheduleSave();});
-  const end = () => { if(activeDrag?.kind==='curve'){activeDrag=null;commitHistory();} }; $('curveViz').addEventListener('pointerup',end);$('curveViz').addEventListener('pointercancel',end);
-}
-
-function setupTimeline() {
-  const trackRect = () => document.querySelector('.timing-track').getBoundingClientRect();
-  $('timeline').addEventListener('pointerdown', (event) => {
-    const phaseHandle = event.target.closest('.phase-handle'), edge = event.target.closest('.timing-handle'), bar = event.target.closest('.timing-bar'), track = event.target.closest('.timing-track'); if (!bar && !track) return;
-    const layer = bar?.dataset.bar || track?.dataset.track, l = model.layers[layer], rect = trackRect();
-    selectedLayer = layer; syncMotionPanel();
-    activeDrag = { kind: phaseHandle ? (phaseHandle.classList.contains('enter-end') ? 'enter-boundary' : 'hold-boundary') : edge ? (edge.classList.contains('end') ? 'end' : 'start') : bar ? 'bar' : 'scrub', layer, rect, x0:event.clientX, start0:l.start, enter0:l.enter, hold0:l.hold, exit0:l.exit, total0:durationMs() };
-    (bar || track).setPointerCapture?.(event.pointerId); event.preventDefault();
-    if (activeDrag.kind === 'scrub') { pause(); playhead = clamp((event.clientX - rect.left) / rect.width, 0, 1); syncPlayhead(); }
-  });
-  $('timeline').addEventListener('pointermove', (event) => {
-    if (!activeDrag || activeDrag.kind === 'curve') return; const a=activeDrag,l=model.layers[a.layer],dxMs=(event.clientX-a.x0)/Math.max(1,a.rect.width)*a.total0;
-    if(a.kind==='scrub'){playhead=clamp((event.clientX-a.rect.left)/a.rect.width,0,1);syncPlayhead();return;}
-    if(a.kind==='bar'||a.kind==='start'){l.start=Math.max(0,snapMs(a.start0+dxMs));}
-    else if(a.kind==='enter-boundary'){
-      const totalPhase=a.enter0+a.hold0+a.exit0, boundary=clamp(snapMs(a.enter0+dxMs),0,Math.max(0,totalPhase-a.exit0)); l.enter=boundary; l.hold=Math.max(0,totalPhase-l.enter-a.exit0);
-    } else if(a.kind==='hold-boundary'){
-      const totalPhase=a.enter0+a.hold0+a.exit0, boundary=clamp(snapMs(a.enter0+a.hold0+dxMs),a.enter0,totalPhase); l.hold=Math.max(0,boundary-a.enter0); l.exit=Math.max(0,totalPhase-a.enter0-l.hold);
-    } else if(a.kind==='end') { l.exit=Math.max(0,snapMs(a.exit0+dxMs)); }
-    syncMotionPanel();syncTimeline();syncPlayhead();scheduleSave();
-  });
-  const stop=()=>{if(activeDrag&&activeDrag.kind!=='curve'){const scrub=activeDrag.kind==='scrub';activeDrag=null;if(!scrub)commitHistory();}}; $('timeline').addEventListener('pointerup',stop);$('timeline').addEventListener('pointercancel',stop);
-  $('timelineRuler').addEventListener('pointerdown',(event)=>{const rect=trackRect();pause();playhead=clamp((event.clientX-rect.left)/rect.width,0,1);syncPlayhead();});
-}
-
-function setupCanvasControls() {
-  $('canvasPreset').addEventListener('change',()=>{const p=CANVAS_PRESETS[$('canvasPreset').value];if(!p)return;[model.canvasWidth,model.canvasHeight]=p;syncForm();applyCanvasSize();syncTimeUI();commitHistory();});
-  ['canvasWidth','canvasHeight'].forEach((id)=>$(id).addEventListener('change',()=>{model[id]=clamp(Math.round(num($(id).value,model[id])),120,4096);$('canvasPreset').value='custom';applyCanvasSize();syncTimeUI();commitHistory();}));
-  $('fitBtn').addEventListener('click',()=>{model.viewportZoom='fit';syncViewport();scheduleSave();});$('viewportZoom').addEventListener('change',()=>{model.viewportZoom=$('viewportZoom').value==='fit'?'fit':num($('viewportZoom').value,1);syncViewport();scheduleSave();});
-  $('viewportGridBtn').addEventListener('click',()=>{model.showGrid=!model.showGrid;$('showGrid').checked=model.showGrid;syncViewport();renderFrame(playhead);commitHistory();}); $('viewportSafeBtn').addEventListener('click',()=>{model.showMargins=!model.showMargins;$('showMargins').checked=model.showMargins;syncViewport();renderFrame(playhead);commitHistory();});
-}
+function setupCanvasControls(){$('canvasPreset').addEventListener('change',()=>{const p=CANVAS_PRESETS[$('canvasPreset').value];if(!p)return;[model.canvasWidth,model.canvasHeight]=p;syncForm();applyCanvasSize();syncTimeUI();commitHistory();});['canvasWidth','canvasHeight'].forEach((id)=>$(id).addEventListener('change',()=>{model[id]=clamp(Math.round(num($(id).value,model[id])),120,4096);$('canvasPreset').value='custom';applyCanvasSize();syncTimeUI();commitHistory();}));$('fitBtn').addEventListener('click',()=>{model.viewportZoom='fit';syncViewport();scheduleSave();});$('viewportZoom').addEventListener('change',()=>{model.viewportZoom=$('viewportZoom').value==='fit'?'fit':num($('viewportZoom').value,1);syncViewport();scheduleSave();});$('viewportGridBtn').addEventListener('click',()=>{model.showGrid=!model.showGrid;$('showGrid').checked=model.showGrid;syncViewport();renderFrame(playhead);commitHistory();});$('viewportSafeBtn').addEventListener('click',()=>{model.showMargins=!model.showMargins;$('showMargins').checked=model.showMargins;syncViewport();renderFrame(playhead);commitHistory();});}
 function setupTabs(){document.querySelectorAll('.tab').forEach((tab)=>tab.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach((x)=>x.classList.toggle('active',x===tab));document.querySelectorAll('.tab-panel').forEach((panel)=>panel.classList.toggle('active',panel.dataset.panel===tab.dataset.tab));}));}
-
-async function exportGif(){const frames=Math.max(2,Math.min(300,Math.round(durationMs()/1000*model.fps))),delay=Math.round(1000/model.fps),scale=model.exportScale;$('exportBtn').disabled=true;$('exportProgress').value=0;$('status').textContent='Loading GIF encoder…';try{const{GIFEncoder,quantize,applyPalette}=await import('https://unpkg.com/gifenc@1.0.3?module');const out=document.createElement('canvas');out.width=Math.round(model.canvasWidth*scale);out.height=Math.round(model.canvasHeight*scale);const outCtx=out.getContext('2d',{willReadFrequently:true}),gif=GIFEncoder();for(let i=0;i<frames;i++){const t=i/(frames-1);renderFrame(t,outCtx,out.width,out.height,{hideGuides:true});const rgba=outCtx.getImageData(0,0,out.width,out.height).data,palette=quantize(rgba,model.gifColors,{format:'rgb565'}),indexed=applyPalette(rgba,palette,'rgb565');gif.writeFrame(indexed,out.width,out.height,{palette,delay,repeat:model.gifLoop?0:-1});$('exportProgress').value=(i+1)/frames;$('status').textContent=`Encoding ${i+1} / ${frames}…`;if(i%3===0)await new Promise((r)=>setTimeout(r,0));}gif.finish();const blob=new Blob([gif.bytes()],{type:'image/gif'});downloadBlob(blob,`anim-${model.canvasWidth}x${model.canvasHeight}.gif`);$('status').textContent=`Done — ${(blob.size/1024/1024).toFixed(1)} MB GIF.`;}catch(error){console.error(error);$('status').textContent=`Export failed: ${error.message||error}`;}finally{$('exportBtn').disabled=false;}}
+async function exportGif(){const frames=Math.max(2,Math.min(360,Math.round(durationMs()/1000*model.fps))),delay=Math.round(1000/model.fps),scale=model.exportScale;$('exportBtn').disabled=true;$('exportProgress').value=0;$('status').textContent='Loading GIF encoder…';try{const{GIFEncoder,quantize,applyPalette}=await import('https://unpkg.com/gifenc@1.0.3?module');const out=document.createElement('canvas');out.width=Math.round(model.canvasWidth*scale);out.height=Math.round(model.canvasHeight*scale);const outCtx=out.getContext('2d',{willReadFrequently:true}),gif=GIFEncoder();for(let i=0;i<frames;i++){const t=i/(frames-1);renderFrame(t,outCtx,out.width,out.height,{hideGuides:true});const rgba=outCtx.getImageData(0,0,out.width,out.height).data,palette=quantize(rgba,model.gifColors,{format:'rgb565'}),indexed=applyPalette(rgba,palette,'rgb565');gif.writeFrame(indexed,out.width,out.height,{palette,delay,repeat:model.gifLoop?0:-1});$('exportProgress').value=(i+1)/frames;$('status').textContent=`Encoding ${i+1} / ${frames}…`;if(i%3===0)await new Promise((r)=>setTimeout(r,0));}gif.finish();const blob=new Blob([gif.bytes()],{type:'image/gif'});downloadBlob(blob,`anim-${model.canvasWidth}x${model.canvasHeight}.gif`);$('status').textContent=`Done — ${(blob.size/1024/1024).toFixed(1)} MB GIF.`;}catch(error){console.error(error);$('status').textContent=`Export failed: ${error.message||error}`;}finally{$('exportBtn').disabled=false;}}
 function downloadBlob(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1200);}
 function exportPng(){const out=document.createElement('canvas');out.width=Math.round(model.canvasWidth*model.exportScale);out.height=Math.round(model.canvasHeight*model.exportScale);renderFrame(playhead,out.getContext('2d'),out.width,out.height,{hideGuides:true});out.toBlob((blob)=>blob&&downloadBlob(blob,`anim-frame-${model.canvasWidth}x${model.canvasHeight}.png`),'image/png');}
-function downloadSetup(){const safe=clone(model);if(safe.logoType==='custom')safe.logoType='wordmark';downloadBlob(new Blob([JSON.stringify({version:4,model:safe},null,2)],{type:'application/json'}),'animation-studio-setup.json');}
-async function importSetup(file){if(!file)return;try{const parsed=JSON.parse(await file.text()),incoming=parsed.model||parsed;if(!incoming?.layers?.logo||!incoming?.layers?.text)throw new Error('Invalid setup');model={...clone(DEFAULT_MODEL),...incoming,layers:{logo:{...clone(DEFAULT_MODEL.layers.logo),...incoming.layers.logo},text:{...clone(DEFAULT_MODEL.layers.text),...incoming.layers.text}}};history=[JSON.stringify(model)];historyIndex=0;syncAll({reloadLogo:true,reloadFont:true});saveNow();$('status').textContent='Setup loaded.';}catch{$('status').textContent='Could not load setup.';}finally{$('setupFile').value='';}}
-function resetDefaults(){model=clone(DEFAULT_MODEL);selectedLayer='logo';selectedCurve='enter';playhead=0;customLogo=null;$('logoFile').value='';history=[JSON.stringify(model)];historyIndex=0;syncAll({reloadLogo:true,reloadFont:true});syncHistoryButtons();saveNow();}
-
-function setupCommands(){
-  $('playBtn').addEventListener('click',play);$('restartBtn').addEventListener('click',restart);$('prevFrameBtn').addEventListener('click',()=>stepFrame(-1));$('nextFrameBtn').addEventListener('click',()=>stepFrame(1));$('scrubber').addEventListener('input',()=>{pause();playhead=clamp(num($('scrubber').value,0),0,1);playbackOffsetMs=playhead*durationMs();syncPlayhead();});
-  $('loopBtn').addEventListener('click',()=>{model.previewLoop=!model.previewLoop;$('loopBtn').classList.toggle('active',model.previewLoop);$('loopBtn').setAttribute('aria-pressed',String(model.previewLoop));commitHistory();});$('snapBtn').addEventListener('click',()=>{model.snap=!model.snap;$('snapBtn').classList.toggle('active',model.snap);$('snapBtn').setAttribute('aria-pressed',String(model.snap));commitHistory();});
-  $('undoBtn').addEventListener('click',undo);$('redoBtn').addEventListener('click',redo);$('resetBtn').addEventListener('click',resetDefaults);$('exportBtn').addEventListener('click',exportGif);$('pngBtn').addEventListener('click',exportPng);$('downloadSetupBtn').addEventListener('click',downloadSetup);$('loadSetupBtn').addEventListener('click',()=>$('setupFile').click());$('setupFile').addEventListener('change',()=>importSetup($('setupFile').files?.[0]));
-  window.addEventListener('keydown',(e)=>{const editable=['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName);if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redo():undo();return;}if(editable)return;if(e.code==='Space'){e.preventDefault();play();}if(e.key==='ArrowLeft'){e.preventDefault();stepFrame(-1);}if(e.key==='ArrowRight'){e.preventDefault();stepFrame(1);}if(e.key.toLowerCase()==='l'){$('loopBtn').click();}if(e.key.toLowerCase()==='s'){$('snapBtn').click();}});
-  window.addEventListener('resize',()=>{updateTimelinePlayhead();if(model.viewportZoom==='fit')syncViewport();});window.addEventListener('beforeunload',saveNow);
-}
-
-async function initialize(){
-  loadSaved(); setupBaseBindings(); setupMotionBindings(); setupCurveEditor(); setupTimeline(); setupCanvasControls(); setupTabs(); setupCommands(); syncAll(); syncHistoryButtons(); await loadBuiltInLogo(model.logoType); loadGoogleFont(); syncPlayhead(); saveNow();
-}
+function downloadSetup(){const safe=clone(model);if(safe.logoType==='custom')safe.logoType='wordmark';downloadBlob(new Blob([JSON.stringify({version:5,model:safe},null,2)],{type:'application/json'}),'animation-studio-setup.json');}
+async function importSetup(file){if(!file)return;try{const parsed=JSON.parse(await file.text()),incoming=parsed.model||parsed;model=normalizeModel(incoming);selectedLayer=model.layers[selectedLayer]?selectedLayer:'logo';history=[JSON.stringify(model)];historyIndex=0;syncAll({reloadLogo:true,reloadFont:true});saveNow();$('status').textContent='Setup loaded.';}catch(error){console.error(error);$('status').textContent='Could not load setup.';}finally{$('setupFile').value='';}}
+function resetDefaults(){model=clone(DEFAULT_MODEL);selectedLayer='logo';selectedCurve='position';playhead=0;customLogo=null;$('logoFile').value='';history=[JSON.stringify(model)];historyIndex=0;syncAll({reloadLogo:true,reloadFont:true});syncHistoryButtons();saveNow();}
+function setupCommands(){$('playBtn').addEventListener('click',play);$('restartBtn').addEventListener('click',restart);$('prevFrameBtn').addEventListener('click',()=>stepFrame(-1));$('nextFrameBtn').addEventListener('click',()=>stepFrame(1));$('scrubber').addEventListener('input',()=>{pause();playhead=clamp(num($('scrubber').value,0),0,1);playbackOffsetMs=playhead*durationMs();syncPlayhead();});$('loopBtn').addEventListener('click',()=>{model.previewLoop=!model.previewLoop;$('loopBtn').classList.toggle('active',model.previewLoop);$('loopBtn').setAttribute('aria-pressed',String(model.previewLoop));commitHistory();});$('snapBtn').addEventListener('click',()=>{model.snap=!model.snap;$('snapBtn').classList.toggle('active',model.snap);$('snapBtn').setAttribute('aria-pressed',String(model.snap));commitHistory();});$('undoBtn').addEventListener('click',undo);$('redoBtn').addEventListener('click',redo);$('resetBtn').addEventListener('click',resetDefaults);$('exportBtn').addEventListener('click',exportGif);$('pngBtn').addEventListener('click',exportPng);$('downloadSetupBtn').addEventListener('click',downloadSetup);$('loadSetupBtn').addEventListener('click',()=>$('setupFile').click());$('setupFile').addEventListener('change',()=>importSetup($('setupFile').files?.[0]));window.addEventListener('keydown',(e)=>{const editable=['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName);if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redo():undo();return;}if(editable)return;if(e.code==='Space'){e.preventDefault();play();}if(e.key==='ArrowLeft'){e.preventDefault();stepFrame(-1);}if(e.key==='ArrowRight'){e.preventDefault();stepFrame(1);}if(e.key.toLowerCase()==='l')$('loopBtn').click();if(e.key.toLowerCase()==='s')$('snapBtn').click();});window.addEventListener('resize',()=>{updateTimelinePlayhead();if(model.viewportZoom==='fit')syncViewport();});window.addEventListener('beforeunload',saveNow);}
+async function initialize(){loadSaved();if(!model.layers[selectedLayer])selectedLayer='logo';setupBaseBindings();setupLayerControls();setupMotionBindings();setupCurveEditor();setupTimeline();setupCanvasControls();setupTabs();setupCommands();syncAll();history=[JSON.stringify(model)];historyIndex=0;syncHistoryButtons();await loadBuiltInLogo(model.logoType);loadGoogleFont();syncPlayhead();saveNow();}
 initialize();
