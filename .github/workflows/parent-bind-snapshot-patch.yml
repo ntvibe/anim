@@ -1,0 +1,44 @@
+name: Parent bind snapshot patch
+on:
+  push:
+    branches:
+      - fix-parent-bind-snapshot
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.event.head_commit.message == 'Run parent bind snapshot patch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix-parent-bind-snapshot
+      - name: Apply patch
+        run: python tools/patch_parent_bind_snapshot.py
+      - name: Validate behavior and syntax
+        run: |
+          node --check experiments/01-bezier-logo-text/app.js
+          python - <<'PY'
+          from pathlib import Path
+          app = Path('experiments/01-bezier-logo-text/app.js').read_text()
+          html = Path('experiments/01-bezier-logo-text/index.html').read_text()
+          assert 'parentBindMatrix' in app
+          assert 'parentBindOpacity' in app
+          assert 'if (ms <= bind)' not in app
+          assert 'if (ms <= pickup)' not in app
+          assert 'parent motion before and after this frame is included' in app
+          assert 'v=6.1.5' in html
+          # Translation sanity: bind parent at 150, child 450.
+          # Earlier parent=100 => 400; bind=>450; later parent=200=>500.
+          parent_bind, child = 150, 450
+          assert 100 - parent_bind + child == 400
+          assert 150 - parent_bind + child == 450
+          assert 200 - parent_bind + child == 500
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name "ntvibe"
+          git config user.email "hakerche@gmail.com"
+          git add experiments/01-bezier-logo-text/app.js experiments/01-bezier-logo-text/index.html
+          git commit -m "Capture Null bind pose for full-timeline parenting"
+          git push origin HEAD:fix-parent-bind-snapshot
