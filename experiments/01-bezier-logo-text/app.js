@@ -52,7 +52,7 @@ function revealDefaults(type) {
     enabled: type !== 'null', start: type === 'text' ? 120 : 0,
     enter: 850, hold: 350, exit: 750,
     enterDirection: 'from-bottom', exitDirection: 'to-top', travel: 50,
-    scaleFrom: type === 'text' ? .96 : .94, stagger: type === 'text' ? 35 : 0,
+    scaleFrom: type === 'text' ? .96 : .94, stagger: type === 'text' ? 35 : 0, staggerOrder: 'forward', staggerPhase: 'enter',
     enterBezier: [...BUILTIN_CURVES.snappy.curve], exitBezier: [0.85, 0, 1, 0.2],
   };
 }
@@ -107,10 +107,18 @@ const objectUrls = new Set();
 function layerIds() { return model.layerOrder.filter((id) => model.layers[id]); }
 function selectedLayer() { return model.layers[selectedLayerId] || model.layers[layerIds()[0]]; }
 function isVisual(layer) { return layer?.type === 'text' || layer?.type === 'image'; }
+function textWordCount(layer) { return layer?.type === 'text' ? Math.max(1, layer.content?.text?.trim().split(/\s+/).filter(Boolean).length || 1) : 1; }
+function staggerSpan(layer) {
+  if (layer?.type !== 'text') return 0;
+  const r = layer.reveal, count = textWordCount(layer);
+  return Math.max(0, count - 1) * Math.max(0, Number(r.stagger) || 0);
+}
 function revealDuration(layer) {
   if (!isVisual(layer) || !layer.reveal.enabled) return 0;
-  const r = layer.reveal;
-  return Math.max(1, r.enter + r.hold + r.exit);
+  const r = layer.reveal, span = staggerSpan(layer), phase = r.staggerPhase || 'enter';
+  const enterSpan = layer.type === 'text' && (phase === 'enter' || phase === 'both') ? span : 0;
+  const exitSpan = layer.type === 'text' && (phase === 'exit' || phase === 'both') ? span : 0;
+  return Math.max(1, r.enter + enterSpan + r.hold + r.exit + exitSpan);
 }
 function revealEnd(layer) { return isVisual(layer) && layer.reveal.enabled ? layer.reveal.start + revealDuration(layer) : 0; }
 function transformEnd(layer) { return layer.transform.enabled ? layer.transform.start + Math.max(1, layer.transform.duration) : 0; }
@@ -199,18 +207,39 @@ function wouldCreateCycle(layerId, parentId) {
   return false;
 }
 
+function staggerRank(index, count, order = 'forward') {
+  if (count <= 1) return 0;
+  if (order === 'reverse') return count - 1 - index;
+  if (order === 'center' || order === 'edges') {
+    const mid = (count - 1) / 2;
+    const ordered = Array.from({ length: count }, (_, i) => i).sort((a, b) => {
+      const da = Math.abs(a - mid), db = Math.abs(b - mid);
+      return order === 'center' ? (da - db || a - b) : (db - da || a - b);
+    });
+    return ordered.indexOf(index);
+  }
+  return index;
+}
 function revealState(layer, ms, wordIndex = 0, wordCount = 1) {
   if (!isVisual(layer) || !layer.reveal.enabled) return { alpha: 1, x: 0, y: 0, scale: 1 };
   const r = layer.reveal, local = ms - r.start;
   if (local < 0) return { alpha: 0, x: 0, y: 0, scale: r.scaleFrom };
-  const stagger = layer.type === 'text' && wordCount > 1 ? wordIndex * r.stagger : 0;
-  const enterStart = stagger, enterEnd = enterStart + r.enter;
+  const isTextStagger = layer.type === 'text' && wordCount > 1 && r.stagger > 0;
+  const rank = isTextStagger ? staggerRank(wordIndex, wordCount, r.staggerOrder || 'forward') : 0;
+  const amount = isTextStagger ? Math.max(0, Number(r.stagger) || 0) : 0;
+  const phase = r.staggerPhase || 'enter';
+  const maxSpan = Math.max(0, wordCount - 1) * amount;
+  const enterDelay = phase === 'enter' || phase === 'both' ? rank * amount : 0;
+  const exitDelay = phase === 'exit' || phase === 'both' ? rank * amount : 0;
+  const enterBlockSpan = phase === 'enter' || phase === 'both' ? maxSpan : 0;
+  const enterStart = enterDelay, enterEnd = enterStart + r.enter;
   const enterVec = directionVector(r.enterDirection), exitVec = directionVector(r.exitDirection);
+  if (local < enterStart) return { alpha: 0, x: enterVec[0]*r.travel, y: enterVec[1]*r.travel, scale: r.scaleFrom };
   if (local < enterEnd) {
     const p = cubicBezierEase(clamp((local-enterStart)/Math.max(1,r.enter),0,1), ...r.enterBezier);
     return { alpha: p, x: enterVec[0]*r.travel*(1-p), y: enterVec[1]*r.travel*(1-p), scale: lerp(r.scaleFrom,1,p) };
   }
-  const exitStart = r.enter + r.hold;
+  const exitStart = r.enter + enterBlockSpan + r.hold + exitDelay;
   if (local <= exitStart) return { alpha: 1, x: 0, y: 0, scale: 1 };
   const p = cubicBezierEase(clamp((local-exitStart)/Math.max(1,r.exit),0,1), ...r.exitBezier);
   return { alpha: 1-p, x: exitVec[0]*r.travel*p, y: exitVec[1]*r.travel*p, scale: 1 };
@@ -266,7 +295,7 @@ function drawTextLayer(context, layer, ms) {
   const c = layer.content, size = fittedFontSize(context, layer); context.font = `${c.fontWeight} ${size}px "${c.fontFamily}", sans-serif`; context.textBaseline='middle'; context.textAlign='left'; context.fillStyle=c.color;
   const words = c.text.split(/\s+/).filter(Boolean); const wordWidths = words.map(w => textWidth(context,w,c.letterSpacing)); const space = context.measureText(' ').width + c.letterSpacing; const totalWidth = wordWidths.reduce((a,b)=>a+b,0)+Math.max(0,words.length-1)*space; let cursor = -totalWidth/2;
   const world = worldMatrix(layer.id, ms), parentOpacity = worldOpacity(layer.id, ms);
-  words.forEach((word,i)=>{const reveal=revealState(layer,ms,i,words.length);if(reveal.alpha>.001){const center=cursor+wordWidths[i]/2;context.save();context.globalAlpha=clamp(parentOpacity*reveal.alpha,0,1);context.transform(...world);context.translate(center+reveal.x,reveal.y);context.scale(reveal.scale,reveal.scale);context.translate(-center,0);drawSpacedText(context,word,c.letterSpacing,0);context.restore();}cursor+=wordWidths[i]+space;});
+  words.forEach((word,i)=>{const reveal=revealState(layer,ms,i,words.length);if(reveal.alpha>.001){const center=cursor+wordWidths[i]/2;context.save();context.globalAlpha=clamp(parentOpacity*reveal.alpha,0,1);context.transform(...world);context.translate(center+reveal.x,reveal.y);context.scale(reveal.scale,reveal.scale);drawSpacedText(context,word,c.letterSpacing,0);context.restore();}cursor+=wordWidths[i]+space;});
 }
 function drawGuides(context) {
   context.save();
@@ -334,7 +363,7 @@ function syncLayerInspector(){const l=selectedLayer();if(!l)return;$('layerName'
   if(l.type==='text'){const c=l.content;$('textValue').value=c.text;$('fontFamily').value=c.fontFamily;$('fontSize').value=c.fontSize;$('fontWeight').value=c.fontWeight;$('letterSpacing').value=c.letterSpacing;$('textColor').value=c.color;$('textMaxWidth').value=c.maxWidth;$('textAutoFit').checked=c.autoFit;}
   if(l.type==='image'){const c=l.content;$('imageAsset').value=c.assetKind in BUILTIN_ASSETS?c.assetKind:'custom';$('imageWidth').value=c.width;$('imageTint').value=c.tint;$('imageFileName').textContent=c.fileName|| (c.assetKind in BUILTIN_ASSETS?`${c.assetKind}.svg`:'Custom image');}
 }
-function syncMotionInspector(){const l=selectedLayer();if(!l)return;const r=l.reveal,p=l.transform;$('revealSection').hidden=!isVisual(l);if(isVisual(l)){$('revealEnabled').checked=r.enabled;$('revealStart').value=Math.round(r.start);$('enterDuration').value=Math.round(r.enter);$('holdDuration').value=Math.round(r.hold);$('exitDuration').value=Math.round(r.exit);$('enterDirection').value=r.enterDirection;$('exitDirection').value=r.exitDirection;$('revealTravel').value=r.travel;$('revealScale').value=r.scaleFrom;$('wordStaggerWrap').hidden=l.type!=='text';$('wordStagger').value=r.stagger;$('wordStaggerOut').textContent=`${Math.round(r.stagger)} ms`;}
+function syncMotionInspector(){const l=selectedLayer();if(!l)return;const r=l.reveal,p=l.transform;$('revealSection').hidden=!isVisual(l);if(isVisual(l)){$('revealEnabled').checked=r.enabled;$('revealStart').value=Math.round(r.start);$('enterDuration').value=Math.round(r.enter);$('holdDuration').value=Math.round(r.hold);$('exitDuration').value=Math.round(r.exit);$('enterDirection').value=r.enterDirection;$('exitDirection').value=r.exitDirection;$('revealTravel').value=r.travel;$('revealScale').value=r.scaleFrom;$('wordStaggerWrap').hidden=l.type!=='text';$('wordStagger').value=r.stagger;$('wordStaggerOut').textContent=`${Math.round(r.stagger)} ms`;$('wordStaggerOrder').value=r.staggerOrder||'forward';$('wordStaggerPhase').value=r.staggerPhase||'enter';}
   $('transformEnabled').checked=p.enabled;$('transformStart').value=Math.round(p.start);$('transformDuration').value=Math.round(p.duration);for(const side of['A','B']){const src=side==='A'?p.from:p.to;$(`pos${side}X`).value=src.x;$(`pos${side}Y`).value=src.y;$(`scale${side}`).value=src.scale;$(`rot${side}`).value=src.rotation;$(`opacity${side}`).value=src.opacity;}
   [...$('curveTarget').options].forEach(o=>{o.disabled=l.type==='null'&&o.value!=='transform';});if(l.type==='null'&&selectedCurveTarget!=='transform')selectedCurveTarget='transform';$('curveTarget').value=selectedCurveTarget;syncCurveUI();}
 function currentCurve(){const l=selectedLayer();if(selectedCurveTarget==='transform')return l.transform.curve;if(selectedCurveTarget==='enter')return l.reveal.enterBezier;return l.reveal.exitBezier;}
@@ -375,6 +404,8 @@ function setupMotionBindings(){
   bindSimple('revealEnabled',()=>selectedLayer().reveal.enabled,v=>selectedLayer().reveal.enabled=v,{checkbox:true,after:()=>{syncMotionInspector();syncTimeline();syncPlayhead();}});
   for(const[prop,id]of[['start','revealStart'],['enter','enterDuration'],['hold','holdDuration'],['exit','exitDuration'],['travel','revealTravel'],['scaleFrom','revealScale'],['stagger','wordStagger']])bindSimple(id,()=>selectedLayer().reveal[prop],v=>selectedLayer().reveal[prop]=prop==='start'||['enter','hold','exit'].includes(prop)?Math.max(0,snapMs(v)):v,{numeric:true,after:()=>{if(prop==='stagger')$('wordStaggerOut').textContent=`${Math.round(selectedLayer().reveal.stagger)} ms`;syncMotionInspector();syncTimeline();syncPlayhead();}});
   bindSimple('enterDirection',()=>selectedLayer().reveal.enterDirection,v=>selectedLayer().reveal.enterDirection=v,{after:()=>renderFrame(playhead)});bindSimple('exitDirection',()=>selectedLayer().reveal.exitDirection,v=>selectedLayer().reveal.exitDirection=v,{after:()=>renderFrame(playhead)});
+  bindSimple('wordStaggerOrder',()=>selectedLayer().reveal.staggerOrder||'forward',v=>selectedLayer().reveal.staggerOrder=v,{after:()=>{syncMotionInspector();syncTimeline();syncPlayhead();}});
+  bindSimple('wordStaggerPhase',()=>selectedLayer().reveal.staggerPhase||'enter',v=>selectedLayer().reveal.staggerPhase=v,{after:()=>{syncMotionInspector();syncTimeline();syncPlayhead();}});
   document.querySelectorAll('[data-reveal-preset]').forEach(btn=>btn.addEventListener('click',()=>{const p=REVEAL_PRESETS[btn.dataset.revealPreset],l=selectedLayer();if(!p||!isVisual(l))return;l.reveal.enter=p.enter;l.reveal.hold=p.hold;l.reveal.exit=p.exit;l.reveal.travel=p.travel;l.reveal.scaleFrom=p.scaleFrom;l.reveal.enterBezier=[...BUILTIN_CURVES[p.enterCurve].curve];l.reveal.exitBezier=[...BUILTIN_CURVES[p.exitCurve].curve];syncAll();commitHistory();}));
   bindSimple('transformEnabled',()=>selectedLayer().transform.enabled,v=>selectedLayer().transform.enabled=v,{checkbox:true,after:()=>{syncLayerInspector();syncMotionInspector();syncTimeline();syncPlayhead();}});
   bindSimple('transformStart',()=>selectedLayer().transform.start,v=>selectedLayer().transform.start=Math.max(0,snapMs(v)),{numeric:true,after:()=>{syncMotionInspector();syncTimeline();syncPlayhead();}});bindSimple('transformDuration',()=>selectedLayer().transform.duration,v=>selectedLayer().transform.duration=Math.max(frameMs(),snapMs(v)),{numeric:true,after:()=>{syncMotionInspector();syncTimeline();syncPlayhead();}});
