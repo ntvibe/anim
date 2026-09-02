@@ -6,7 +6,7 @@
   <title>Animation Studio — Mini AE</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="./style.css?v=6.1.5" />
+  <link rel="stylesheet" href="./style.css?v=6.2.0" />
 </head>
 <body>
 <main class="studio-shell">
@@ -43,6 +43,19 @@
         <div class="two-col"><label>Parent<select id="parentLayer"></select></label><label>&nbsp;<button id="deleteLayerBtn" class="danger-button">Delete layer</button></label></div><p id="parentPickupHint" class="hint parent-pickup-hint" hidden></p>
         <div class="inspector-section"><div class="mini-heading"><strong>Base transform</strong><span>used when A→B is off</span></div><div class="two-col"><label>X<div class="unit-field"><input id="baseX" type="number" step="1"/><span>px</span></div></label><label>Y<div class="unit-field"><input id="baseY" type="number" step="1"/><span>px</span></div></label><label>Scale<input id="baseScale" type="number" step="0.01" min="0"/></label><label>Rotation<div class="unit-field"><input id="baseRotation" type="number" step="1"/><span>°</span></div></label><label>Opacity<input id="baseOpacity" type="number" step="0.01" min="0" max="1"/></label></div></div>
 
+        <div id="alignmentControls" class="inspector-section alignment-controls">
+          <div class="mini-heading"><strong>Align</strong><span>bounds + anchor</span></div>
+          <div class="two-col">
+            <label>Relative to<select id="alignTarget"><option value="canvas">Canvas</option><option value="safe">Safe area</option></select></label>
+            <label>Align using<select id="alignReference"><option value="bounds">Object bounds</option><option value="anchor">Alignment anchor</option></select></label>
+          </div>
+          <div class="alignment-visuals">
+            <div class="alignment-picker"><div class="alignment-picker-title"><span>Anchor</span><small id="alignAnchorName">Center</small></div><div id="alignAnchorGrid" class="align-nine-grid"><button type="button" class="align-point" data-point="tl" data-align-anchor="tl" title="Anchor: Top left" aria-label="Anchor Top left"><span></span></button><button type="button" class="align-point" data-point="tc" data-align-anchor="tc" title="Anchor: Top center" aria-label="Anchor Top center"><span></span></button><button type="button" class="align-point" data-point="tr" data-align-anchor="tr" title="Anchor: Top right" aria-label="Anchor Top right"><span></span></button><button type="button" class="align-point" data-point="cl" data-align-anchor="cl" title="Anchor: Center left" aria-label="Anchor Center left"><span></span></button><button type="button" class="align-point" data-point="cc" data-align-anchor="cc" title="Anchor: Center" aria-label="Anchor Center"><span></span></button><button type="button" class="align-point" data-point="cr" data-align-anchor="cr" title="Anchor: Center right" aria-label="Anchor Center right"><span></span></button><button type="button" class="align-point" data-point="bl" data-align-anchor="bl" title="Anchor: Bottom left" aria-label="Anchor Bottom left"><span></span></button><button type="button" class="align-point" data-point="bc" data-align-anchor="bc" title="Anchor: Bottom center" aria-label="Anchor Bottom center"><span></span></button><button type="button" class="align-point" data-point="br" data-align-anchor="br" title="Anchor: Bottom right" aria-label="Anchor Bottom right"><span></span></button></div></div>
+            <div class="alignment-picker"><div class="alignment-picker-title"><span>Place on frame</span><small>9-point</small></div><div id="alignPlaceGrid" class="align-nine-grid"><button type="button" class="align-point place" data-point="tl" data-align-place="tl" title="Align Top left" aria-label="Align Top left"><span></span></button><button type="button" class="align-point place" data-point="tc" data-align-place="tc" title="Align Top center" aria-label="Align Top center"><span></span></button><button type="button" class="align-point place" data-point="tr" data-align-place="tr" title="Align Top right" aria-label="Align Top right"><span></span></button><button type="button" class="align-point place" data-point="cl" data-align-place="cl" title="Align Center left" aria-label="Align Center left"><span></span></button><button type="button" class="align-point place" data-point="cc" data-align-place="cc" title="Align Center" aria-label="Align Center"><span></span></button><button type="button" class="align-point place" data-point="cr" data-align-place="cr" title="Align Center right" aria-label="Align Center right"><span></span></button><button type="button" class="align-point place" data-point="bl" data-align-place="bl" title="Align Bottom left" aria-label="Align Bottom left"><span></span></button><button type="button" class="align-point place" data-point="bc" data-align-place="bc" title="Align Bottom center" aria-label="Align Bottom center"><span></span></button><button type="button" class="align-point place" data-point="br" data-align-place="br" title="Align Bottom right" aria-label="Align Bottom right"><span></span></button></div></div>
+          </div>
+          <p id="alignHelp" class="hint">Each placement button aligns the matching side, corner, or center of the current object bounds.</p>
+        </div>
+
         <div id="textControls" class="inspector-section" hidden><div class="mini-heading"><strong>Text</strong><span>each text layer is independent</span></div><label>Text<textarea id="textValue" rows="3"></textarea></label><label>Google font<div class="inline-control"><input id="fontFamily" value="Anton"/><button id="loadFontBtn" class="secondary compact">Load</button></div></label><div class="two-col"><label>Size<div class="unit-field"><input id="fontSize" type="number"/><span>px</span></div></label><label>Weight<input id="fontWeight" type="number" step="100" min="100" max="900"/></label><label>Tracking<div class="unit-field"><input id="letterSpacing" type="number" step="0.5"/><span>px</span></div></label><label>Color<input id="textColor" type="color"/></label><label>Max width<div class="unit-field"><input id="textMaxWidth" type="number"/><span>px</span></div></label></div><label class="check-row"><input id="textAutoFit" type="checkbox"/> Auto fit to max width</label></div>
 
         <div id="imageControls" class="inspector-section" hidden><div class="mini-heading"><strong>Image / SVG</strong><span>logo is just an image layer now</span></div><label>Built-in asset<select id="imageAsset"><option value="wordmark">Wordmark</option><option value="combination">Combination</option><option value="stacked">Stacked</option><option value="lettermark">Lettermark</option><option value="custom">Custom…</option></select></label><input id="imageFile" type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp,.svg" hidden/><p id="imageFileName" class="hint"></p><div class="two-col"><label>Width<div class="unit-field"><input id="imageWidth" type="number" min="10" step="5"/><span>px</span></div></label><label>Tint<input id="imageTint" type="color"/></label></div></div>
@@ -67,7 +80,7 @@
     </div>
   </aside>
 </main>
-<script src="./boot-guard.js?v=6.1.5"></script>
-<script type="module" src="./app.js?v=6.1.5"></script>
+<script src="./boot-guard.js?v=6.2.0"></script>
+<script type="module" src="./app.js?v=6.2.0"></script>
 </body>
 </html>
