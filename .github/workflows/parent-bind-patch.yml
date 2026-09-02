@@ -1,0 +1,48 @@
+name: Parent bind pose patch
+on:
+  push:
+    branches:
+      - fix-parent-bind-pose
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.event.head_commit.message == 'Add parent bind-pose patch script'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix-parent-bind-pose
+      - name: Apply patch
+        run: python tools/patch_parent_bind.py
+      - name: Validate behavior and syntax
+        run: |
+          node --check experiments/01-bezier-logo-text/app.js
+          python - <<'PY'
+          from pathlib import Path
+          app = Path('experiments/01-bezier-logo-text/app.js').read_text()
+          html = Path('experiments/01-bezier-logo-text/index.html').read_text()
+          assert 'function parentBindMs(layer)' in app
+          assert 'if (ms <= pickup) return local;' not in app
+          assert 'if (ms <= pickup) return own;' not in app
+          assert 'parentBindMs = bind' in app
+          assert 'parentStartMs' in app  # migration read remains intentionally
+          assert 'Before that time this layer stays independent.' not in app
+          assert 'parenting applies across the full timeline' in app
+          assert 'v=6.1.4' in html
+          # Sanity check the intended bind equation for a translating parent.
+          # At bind P=150 and child L=450 -> 150 * inv(150) * 450 == 450.
+          parent_now, parent_bind, child = 150, 150, 450
+          assert parent_now - parent_bind + child == 450
+          # Before bind, parent delta is still active: P=100 -> child becomes 400.
+          assert 100 - parent_bind + child == 400
+          # After bind, P=200 -> child becomes 500.
+          assert 200 - parent_bind + child == 500
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name "ntvibe"
+          git config user.email "hakerche@gmail.com"
+          git add experiments/01-bezier-logo-text/app.js experiments/01-bezier-logo-text/index.html
+          git commit -m "Use bind-pose Null parenting across timeline"
+          git push origin HEAD:fix-parent-bind-pose
