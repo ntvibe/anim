@@ -6,6 +6,7 @@
   const RETRY_KEY = 'anim-studio:boot-retry:v1';
   const BACKUP_KEY = 'anim-studio:recovery-backup:v1';
   let runtimeError = null;
+  let enhancementsLoaded = false;
 
   try {
     const backup = {};
@@ -30,6 +31,19 @@
     return rows.length > 0 && !!name && name.value.trim().length > 0 && !!canvas && canvas.width > 0 && canvas.height > 0;
   }
 
+  function loadEnhancements() {
+    if (enhancementsLoaded) return;
+    enhancementsLoaded = true;
+    const css = document.createElement('link');
+    css.rel = 'stylesheet';
+    css.href = './enhancements.css?v=6.3.0';
+    document.head.appendChild(css);
+    const script = document.createElement('script');
+    script.type = 'module';
+    script.src = './enhancements.js?v=6.3.0';
+    document.body.appendChild(script);
+  }
+
   function showRecoveryMessage() {
     const host = document.querySelector('.stage-shell') || document.body;
     if (document.getElementById('bootRecovery')) return;
@@ -48,6 +62,7 @@
   window.setTimeout(() => {
     if (editorLooksBooted()) {
       try { sessionStorage.removeItem(RETRY_KEY); } catch {}
+      loadEnhancements();
       return;
     }
 
