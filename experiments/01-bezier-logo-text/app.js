@@ -174,43 +174,55 @@ function localTransformAt(layer, ms) {
 function parentBindMs(layer) {
   return layer?.parentBindMs == null ? null : Math.max(0, num(layer.parentBindMs, 0));
 }
+function validBindMatrix(layer) {
+  return Array.isArray(layer?.parentBindMatrix) && layer.parentBindMatrix.length === 6 && layer.parentBindMatrix.every(Number.isFinite);
+}
+function captureMissingBindReference(layer, seen = new Set()) {
+  if (!layer?.parentId || !model.layers[layer.parentId]) return null;
+  if (validBindMatrix(layer)) return { matrix: layer.parentBindMatrix, opacity: layer.parentBindOpacity == null ? 1 : num(layer.parentBindOpacity, 1) };
+  const bind = parentBindMs(layer);
+  if (bind == null) return null;
+  // Upgrade existing v6.1.4 saves lazily: capture the parent's actual world pose once.
+  const matrix = worldMatrix(layer.parentId, bind, new Set(seen));
+  const opacity = worldOpacity(layer.parentId, bind, new Set(seen));
+  layer.parentBindMatrix = [...matrix];
+  layer.parentBindOpacity = opacity;
+  scheduleSave();
+  return { matrix: layer.parentBindMatrix, opacity };
+}
 function worldMatrix(layerId, ms, seen = new Set()) {
   const layer = model.layers[layerId]; if (!layer || seen.has(layerId)) return [1,0,0,1,0,0];
   seen.add(layerId);
   const local = matFromTransform(localTransformAt(layer, ms));
   if (!layer.parentId || !model.layers[layer.parentId]) return local;
-  const bind = parentBindMs(layer);
-  // Legacy parent relationships without a bind frame keep their old direct-parent behavior.
-  if (bind == null) return matMul(worldMatrix(layer.parentId, ms, new Set(seen)), local);
-  // AE-style bind pose: the relationship is active across the whole timeline, but the
-  // parent's transform at the frame where parenting happened is treated as identity.
   const parentNow = worldMatrix(layer.parentId, ms, new Set(seen));
-  const parentAtBind = worldMatrix(layer.parentId, bind, new Set(seen));
-  return matMul(matMul(parentNow, matInv(parentAtBind)), local);
+  const reference = captureMissingBindReference(layer, new Set(seen));
+  // Legacy relationships without any bind metadata keep direct-parent behavior.
+  if (!reference) return matMul(parentNow, local);
+  // Parenting is active for the ENTIRE timeline. The stored bind matrix is only the
+  // neutral coordinate basis, so parent motion before and after the bind frame applies.
+  return matMul(matMul(parentNow, matInv(reference.matrix)), local);
 }
 function worldOpacity(layerId, ms, seen = new Set()) {
   const layer = model.layers[layerId]; if (!layer || seen.has(layerId)) return 1;
   seen.add(layerId);
   const own = localTransformAt(layer, ms).opacity;
   if (!layer.parentId || !model.layers[layer.parentId]) return own;
-  const bind = parentBindMs(layer);
-  if (bind == null) return own * worldOpacity(layer.parentId, ms, new Set(seen));
   const parentNow = worldOpacity(layer.parentId, ms, new Set(seen));
-  const parentAtBind = worldOpacity(layer.parentId, bind, new Set(seen));
-  const parentFactor = parentAtBind > 1e-6 ? parentNow / parentAtBind : 1;
-  return own * parentFactor;
+  const reference = captureMissingBindReference(layer, new Set(seen));
+  if (!reference) return own * parentNow;
+  const factor = reference.opacity > 1e-6 ? parentNow / reference.opacity : 1;
+  return own * factor;
 }
 function parentInfluenceAt(layer, ms) {
   if (!layer.parentId || !model.layers[layer.parentId]) return { matrix: [1,0,0,1,0,0], opacity: 1 };
-  const bind = parentBindMs(layer);
-  if (bind == null) return { matrix: worldMatrix(layer.parentId, ms), opacity: worldOpacity(layer.parentId, ms) };
   const parentNow = worldMatrix(layer.parentId, ms);
-  const parentAtBind = worldMatrix(layer.parentId, bind);
   const opacityNow = worldOpacity(layer.parentId, ms);
-  const opacityAtBind = worldOpacity(layer.parentId, bind);
+  const reference = captureMissingBindReference(layer);
+  if (!reference) return { matrix: parentNow, opacity: opacityNow };
   return {
-    matrix: matMul(parentNow, matInv(parentAtBind)),
-    opacity: opacityAtBind > 1e-6 ? opacityNow / opacityAtBind : 1,
+    matrix: matMul(parentNow, matInv(reference.matrix)),
+    opacity: reference.opacity > 1e-6 ? opacityNow / reference.opacity : 1,
   };
 }
 function bakeCurrentParentInfluence(layer, ms) {
@@ -229,14 +241,21 @@ function reparentLayer(layerId, newParentId) {
   if (nextParentId === layer.parentId) return;
   const rawBind = playhead * durationMs();
   const bind = Math.max(0, model.snap ? snapMs(rawBind) : rawBind);
-  // If changing/removing an existing parent, first bake its current influence into the
-  // child's own transform values so the child does not jump on this frame.
+  // Preserve the current visual pose when leaving/changing an existing parent.
   if (layer.parentId && model.layers[layer.parentId]) bakeCurrentParentInfluence(layer, bind);
   layer.parentId = null;
   layer.parentBindMs = null;
+  layer.parentBindMatrix = null;
+  layer.parentBindOpacity = null;
   if (nextParentId && model.layers[nextParentId]) {
+    // Capture the parent basis BEFORE assigning it to this child. This is a fixed snapshot,
+    // not a time gate: movement on both sides of the bind frame is inherited.
+    const bindMatrix = worldMatrix(nextParentId, bind, new Set([layerId]));
+    const bindOpacity = worldOpacity(nextParentId, bind, new Set([layerId]));
     layer.parentId = nextParentId;
     layer.parentBindMs = bind;
+    layer.parentBindMatrix = [...bindMatrix];
+    layer.parentBindOpacity = bindOpacity;
   }
 }
 function wouldCreateCycle(layerId, parentId) {
@@ -352,7 +371,7 @@ function renderFrame(t, targetCtx = ctx, width = canvas.width, height = canvas.h
 
 function normalizeLayer(layer, modelRef) {
   const base = transform(modelRef.canvasWidth/2,modelRef.canvasHeight/2,1,0,1);
-  const bindMs = layer.parentBindMs ?? layer.parentStartMs ?? null; const out = { ...layer, parentId: layer.parentId || null, parentBindMs: bindMs == null ? null : Math.max(0, num(bindMs, 0)), base: { ...base, ...(layer.base||{}) } }; delete out.parentStartMs;
+  const bindMs = layer.parentBindMs ?? layer.parentStartMs ?? null; const bindMatrix = Array.isArray(layer.parentBindMatrix) && layer.parentBindMatrix.length === 6 ? layer.parentBindMatrix.map(Number) : null; const out = { ...layer, parentId: layer.parentId || null, parentBindMs: bindMs == null ? null : Math.max(0, num(bindMs, 0)), parentBindMatrix: bindMatrix, parentBindOpacity: layer.parentBindOpacity == null ? null : num(layer.parentBindOpacity, 1), base: { ...base, ...(layer.base||{}) } }; delete out.parentStartMs;
   out.reveal = { ...revealDefaults(layer.type), ...(layer.reveal||{}) };
   out.transform = { ...transformClip(out.base,false), ...(layer.transform||{}), from:{...out.base,...(layer.transform?.from||{})},to:{...out.base,...(layer.transform?.to||{})},curve:Array.isArray(layer.transform?.curve)?layer.transform.curve.map(Number):[...BUILTIN_CURVES.snappy.curve] };
   if (layer.type==='text') out.content={text:'NEW TEXT',fontFamily:'Anton',fontSize:52,fontWeight:400,letterSpacing:2,color:'#fff',align:'center',maxWidth:Math.round(modelRef.canvasWidth*.8),autoFit:true,...(layer.content||{})};
@@ -394,7 +413,7 @@ function updateTimelinePlayhead(){const track=document.querySelector('.timing-tr
 function syncTimeUI(){const total=durationMs();$('timeReadout').textContent=`${(playhead*total/1000).toFixed(2)} s`;$('totalTimeReadout').textContent=`${(total/1000).toFixed(2)} s`;$('frameEstimate').textContent=String(Math.max(2,Math.min(360,Math.round(total/1000*model.fps))));$('outputSizeReadout').textContent=`${Math.round(model.canvasWidth*model.exportScale)} × ${Math.round(model.canvasHeight*model.exportScale)}`;}
 
 function parentOptions(layer){const options=['<option value="">None</option>'];layerIds().forEach(id=>{const candidate=model.layers[id];if(candidate.type!=='null'||id===layer.id||wouldCreateCycle(layer.id,id))return;options.push(`<option value="${id}">${escapeHtml(candidate.name)}</option>`);});return options.join('');}
-function syncLayerInspector(){const l=selectedLayer();if(!l)return;$('layerName').value=l.name;$('layerTypeBadge').textContent=l.type;$('layerTypeBadge').className=`type-badge ${l.type}`;$('deleteLayerBtn').disabled=layerIds().length<=1;$('parentLayer').innerHTML=parentOptions(l);$('parentLayer').value=l.parentId||'';const parentHint=$('parentPickupHint');if(parentHint){const pickup=parentBindMs(l);parentHint.hidden=!l.parentId;parentHint.textContent=!l.parentId?'':pickup==null?'Legacy parent relation. Reassign the parent at the desired timeline position to create a bind pose.':`Bound to ${model.layers[l.parentId]?.name||'parent'} at ${formatTime(pickup)}. That frame is the reference pose; parenting applies across the full timeline.`;}
+function syncLayerInspector(){const l=selectedLayer();if(!l)return;$('layerName').value=l.name;$('layerTypeBadge').textContent=l.type;$('layerTypeBadge').className=`type-badge ${l.type}`;$('deleteLayerBtn').disabled=layerIds().length<=1;$('parentLayer').innerHTML=parentOptions(l);$('parentLayer').value=l.parentId||'';const parentHint=$('parentPickupHint');if(parentHint){const pickup=parentBindMs(l);parentHint.hidden=!l.parentId;parentHint.textContent=!l.parentId?'':pickup==null?'Legacy parent relation. Reassign the parent at the desired timeline position to create a bind pose.':`Bound to ${model.layers[l.parentId]?.name||'parent'} at ${formatTime(pickup)}. This is only the reference pose; parent motion before and after this frame is included.`;}
   ['baseX','baseY','baseScale','baseRotation','baseOpacity'].forEach(id=>$(id).disabled=l.transform.enabled);
   $('baseX').value=Math.round(l.base.x*100)/100;$('baseY').value=Math.round(l.base.y*100)/100;$('baseScale').value=l.base.scale;$('baseRotation').value=l.base.rotation;$('baseOpacity').value=l.base.opacity;
   $('textControls').hidden=l.type!=='text';$('imageControls').hidden=l.type!=='image';$('nullHint').hidden=l.type!=='null';
