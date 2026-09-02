@@ -8,5 +8,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Check JavaScript syntax
+      - name: Check latest JavaScript syntax
         run: node --check experiments/01-bezier-logo-text/app.js
