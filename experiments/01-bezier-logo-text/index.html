@@ -2,136 +2,67 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Animation Studio — anim</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Animation Studio — Mini AE</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link id="googleFontStylesheet" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&display=swap" />
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-  <main class="studio-shell">
-    <section class="workspace">
-      <div class="viewport-toolbar">
-        <div class="viewport-left"><strong>Animation Studio</strong><span class="canvas-size" id="canvasReadout">800 × 450</span><span class="save-status" id="saveStatus"><i></i>Autosaved</span></div>
-        <div class="viewport-actions">
-          <button id="fitBtn" type="button" class="viewport-action active">Fit</button>
-          <select id="viewportZoom" aria-label="Viewport zoom"><option value="fit" selected>Fit</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100%</option><option value="1.5">150%</option></select>
-          <span class="toolbar-separator"></span>
-          <button id="viewportGridBtn" type="button" class="icon-button small" title="Toggle grid" aria-label="Toggle grid"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4V4Zm5 2H6v3h3V6Zm2 0v3h3V6h-3Zm5 0v3h2V6h-2ZM6 11v3h3v-3H6Zm5 0v3h3v-3h-3Zm5 0v3h2v-3h-2ZM6 16v2h3v-2H6Zm5 0v2h3v-2h-3Zm5 0v2h2v-2h-2Z"/></svg></button>
-          <button id="viewportSafeBtn" type="button" class="icon-button small active" title="Toggle safe guides" aria-label="Toggle safe guides"><svg viewBox="0 0 24 24"><path d="M5 3h4v2H7v2H5V3Zm10 0h4v4h-2V5h-2V3ZM5 17h2v2h2v2H5v-4Zm12 0h2v4h-4v-2h2v-2ZM8 8h8v8H8V8Zm2 2v4h4v-4h-4Z"/></svg></button>
-        </div>
+<main class="studio-shell">
+  <section class="workspace">
+    <div class="viewport-toolbar">
+      <div class="viewport-left"><strong>Animation Studio</strong><span id="canvasReadout">800 × 450</span><span id="saveStatus" class="save-status">Autosaved</span></div>
+      <div class="viewport-actions"><button id="restartBtn" class="icon-button" title="Start">↤</button><button id="prevFrameBtn" class="icon-button" title="Previous frame">‹</button><button id="playBtn" class="play-button"><span>Play</span></button><button id="nextFrameBtn" class="icon-button" title="Next frame">›</button><div class="time-cluster"><span id="timeReadout">0.00 s</span><span>/</span><span id="totalTimeReadout">2.07 s</span></div><input id="scrubber" type="range" min="0" max="1" step="0.001" value="0" /><button id="loopBtn" class="icon-button active" title="Loop (L)">↻</button><button id="undoBtn" class="icon-button" title="Undo">↶</button><button id="redoBtn" class="icon-button" title="Redo">↷</button><button id="resetBtn" class="reset-button">Reset</button></div>
+    </div>
+
+    <div class="stage-shell"><canvas id="stage" width="800" height="450"></canvas></div>
+
+    <section class="timeline-panel">
+      <div class="timeline-head">
+        <div class="timeline-title-row"><strong>Timeline</strong><span id="timelineStatus">2.07s</span></div>
+        <div class="timeline-actions"><button id="addTextBtn" class="add-layer">+ Text</button><button id="addImageBtn" class="add-layer">+ Image</button><button id="addNullBtn" class="add-layer">+ Null</button><button id="snapBtn" class="micro-toggle active">Snap</button></div>
       </div>
-
-      <div class="stage-shell" id="stageShell"><div class="stage-backdrop" aria-hidden="true"></div><canvas id="stage" width="800" height="450" aria-label="Animation preview"></canvas></div>
-
-      <div class="transport" aria-label="Playback controls">
-        <button id="playBtn" type="button" class="play-button" aria-label="Play animation"><svg viewBox="0 0 24 24"><path d="m8 5 11 7-11 7V5Z"/></svg><span>Play</span></button>
-        <button id="restartBtn" type="button" class="icon-button" title="Jump to beginning" aria-label="Jump to beginning"><svg viewBox="0 0 24 24"><path d="M7 5v14H5V5h2Zm12 7-9 6V6l9 6Z"/></svg></button>
-        <button id="prevFrameBtn" type="button" class="icon-button" title="Previous frame" aria-label="Previous frame"><svg viewBox="0 0 24 24"><path d="M8 5v14H6V5h2Zm10 2v10l-8-5 8-5Z"/></svg></button>
-        <button id="nextFrameBtn" type="button" class="icon-button" title="Next frame" aria-label="Next frame"><svg viewBox="0 0 24 24"><path d="M16 5h2v14h-2V5ZM6 7l8 5-8 5V7Z"/></svg></button>
-        <select id="playbackRate" class="speed-select" aria-label="Playback speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select>
-        <div class="time-cluster"><output id="timeReadout">0.00 s</output><span>/</span><output id="totalTimeReadout">2.07 s</output></div>
-        <input id="scrubber" type="range" min="0" max="1" step="0.001" value="0" aria-label="Animation playhead" />
-        <button id="loopBtn" type="button" class="icon-button active" aria-pressed="true" title="Loop playback (L)" aria-label="Loop playback"><svg viewBox="0 0 24 24"><path d="M17.6 6H8.4l2.3-2.3-1.4-1.4L4.6 7l4.7 4.7 1.4-1.4L8.4 8h9.2A2.4 2.4 0 0 1 20 10.4V11h2v-.6A4.4 4.4 0 0 0 17.6 6ZM6.4 18h9.2l-2.3 2.3 1.4 1.4 4.7-4.7-4.7-4.7-1.4 1.4 2.3 2.3H6.4A2.4 2.4 0 0 1 4 13.6V13H2v.6A4.4 4.4 0 0 0 6.4 18Z"/></svg></button>
-        <span class="transport-divider"></span>
-        <button id="undoBtn" type="button" class="icon-button" title="Undo (Ctrl/Cmd+Z)" aria-label="Undo" disabled><svg viewBox="0 0 24 24"><path d="M9 7 4 12l5 5v-3h5a5 5 0 0 1 5 5h2a7 7 0 0 0-7-7H9V7Z"/></svg></button>
-        <button id="redoBtn" type="button" class="icon-button" title="Redo (Ctrl/Cmd+Shift+Z)" aria-label="Redo" disabled><svg viewBox="0 0 24 24"><path d="m15 7 5 5-5 5v-3h-5a5 5 0 0 0-5 5H3a7 7 0 0 1 7-7h5V7Z"/></svg></button>
-        <button id="resetBtn" type="button" class="reset-button" title="Reset to defaults">Reset</button>
+      <div class="timeline-grid">
+        <div class="layer-column-head">Layers</div><div id="timelineRuler" class="timeline-ruler"></div>
+        <div id="layerTree" class="layer-tree"></div><div id="timeline" class="timeline"></div>
       </div>
-
-      <section class="timeline-panel" aria-label="Layer timeline">
-        <div class="timeline-head">
-          <div class="timeline-title-row"><strong>Timeline</strong><span id="timelineStatus">2.07 s</span></div>
-          <div class="timeline-head-actions">
-            <button id="addNullBtn" type="button" class="micro-toggle add-null" title="Add null object"><span>＋</span><strong>Null</strong></button>
-            <button id="snapBtn" type="button" class="micro-toggle active" aria-pressed="true" title="Snap timing to frames (S)"><svg viewBox="0 0 24 24"><path d="M7 3h3v7H7a4 4 0 0 1 0-8v1Zm7 0h3v-1a4 4 0 0 1 0 8h-3V3Zm-7 9h3v9H7a6 6 0 0 1 0-12v3Zm7 0h3V9a6 6 0 0 1 0 12h-3v-9Z"/></svg><span>Snap</span></button>
-            <div class="phase-legend"><span><i class="enter"></i>Enter</span><span><i class="hold"></i>Hold</span><span><i class="exit"></i>Exit</span><span><i class="position"></i>A→B</span></div>
-          </div>
-        </div>
-        <div class="timeline-grid">
-          <div class="layer-column-head">Layers</div>
-          <div class="timeline-ruler" id="timelineRuler" aria-label="Timeline ruler"></div>
-          <div class="layer-tree" id="layerTree"></div>
-          <div id="timeline" class="timeline"><div class="timeline-playhead" aria-hidden="true"></div></div>
-        </div>
-      </section>
     </section>
+  </section>
 
-    <aside class="controls">
-      <nav class="tabs" aria-label="Editor controls"><button type="button" class="tab active" data-tab="typography">Type</button><button type="button" class="tab" data-tab="lockup">Lockup</button><button type="button" class="tab" data-tab="logo">Logo</button><button type="button" class="tab" data-tab="motion">Motion</button><button type="button" class="tab" data-tab="canvas">Canvas</button><button type="button" class="tab" data-tab="export">Export</button></nav>
-      <div class="tab-panels">
-        <section class="tab-panel active" data-panel="typography">
-          <div class="section-heading"><h2>Typography</h2><span>Google Fonts</span></div>
-          <label>Claim <input id="headline" type="text" value="MORGEN MACHT MAN HEUTE." /></label>
-          <label>Font family<div class="inline-control"><input id="fontFamily" type="text" value="Anton" placeholder="Anton, Oswald, Roboto Condensed…" /><button id="loadFontBtn" type="button" class="secondary compact">Load</button></div></label>
-          <p class="hint" id="fontStatus">Anton loaded from Google Fonts.</p>
-          <label class="check-row"><input id="autoFit" type="checkbox" checked /> Fit claim to safe margins</label>
-          <div class="two-col"><label>Font size <div class="unit-field"><input id="fontSize" type="number" min="10" max="400" step="1" value="52" /><span>px</span></div></label><label>Weight <input id="fontWeight" type="number" min="100" max="900" step="100" value="400" /></label><label>Letter spacing <div class="unit-field"><input id="letterSpacing" type="number" min="-10" max="40" step="0.5" value="2" /><span>px</span></div></label><label>Word spacing <div class="unit-field"><input id="wordSpacing" type="number" min="-20" max="80" step="1" value="0" /><span>px</span></div></label><label>Text align<select id="textAlign"><option value="center" selected>Center</option><option value="left">Left</option><option value="right">Right</option></select></label><label>Text casing<select id="textTransform"><option value="none">As typed</option><option value="uppercase" selected>UPPERCASE</option><option value="capitalize">Capitalize</option><option value="lowercase">lowercase</option></select></label><label>Text color <input id="textColor" type="color" value="#ffffff" /></label></div>
-        </section>
+  <aside class="controls">
+    <nav class="tabs"><button class="tab active" data-tab="layer">Layer</button><button class="tab" data-tab="motion">Motion</button><button class="tab" data-tab="canvas">Canvas</button><button class="tab" data-tab="export">Export</button></nav>
+    <div class="tab-panels">
+      <section class="tab-panel active" data-panel="layer">
+        <div class="section-heading"><h2>Layer</h2><span id="layerTypeBadge" class="type-badge image">image</span></div>
+        <label>Name <input id="layerName" type="text" /></label>
+        <div class="two-col"><label>Parent<select id="parentLayer"></select></label><label>&nbsp;<button id="deleteLayerBtn" class="danger-button">Delete layer</button></label></div>
+        <div class="inspector-section"><div class="mini-heading"><strong>Base transform</strong><span>used when A→B is off</span></div><div class="two-col"><label>X<div class="unit-field"><input id="baseX" type="number" step="1"/><span>px</span></div></label><label>Y<div class="unit-field"><input id="baseY" type="number" step="1"/><span>px</span></div></label><label>Scale<input id="baseScale" type="number" step="0.01" min="0"/></label><label>Rotation<div class="unit-field"><input id="baseRotation" type="number" step="1"/><span>°</span></div></label><label>Opacity<input id="baseOpacity" type="number" step="0.01" min="0" max="1"/></label></div></div>
 
-        <section class="tab-panel" data-panel="lockup">
-          <div class="section-heading"><h2>Lockup</h2><span>Logo + claim</span></div>
-          <label>Text position<select id="position"><option value="below" selected>Below logo</option><option value="above">Above logo</option><option value="right">Right of logo</option><option value="left">Left of logo</option></select></label>
-          <div class="two-col"><label>Gap <div class="unit-field"><input id="gap" type="number" min="0" max="400" step="2" value="28" /><span>px</span></div></label><label>Horizontal align<select id="alignment"><option value="center" selected>Center</option><option value="start">Start</option><option value="end">End</option></select></label><label>Vertical align<select id="verticalAlignment"><option value="center" selected>Center</option><option value="start">Top</option><option value="end">Bottom</option></select></label><label>Group X <div class="unit-field"><input id="offsetX" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label><label>Group Y <div class="unit-field"><input id="offsetY" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label><label>Logo X <div class="unit-field"><input id="logoOffsetX" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label><label>Logo Y <div class="unit-field"><input id="logoOffsetY" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label><label>Text X <div class="unit-field"><input id="textOffsetX" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label><label>Text Y <div class="unit-field"><input id="textOffsetY" type="number" min="-1000" max="1000" step="2" value="0" /><span>px</span></div></label></div>
-        </section>
+        <div id="textControls" class="inspector-section" hidden><div class="mini-heading"><strong>Text</strong><span>each text layer is independent</span></div><label>Text<textarea id="textValue" rows="3"></textarea></label><label>Google font<div class="inline-control"><input id="fontFamily" value="Anton"/><button id="loadFontBtn" class="secondary compact">Load</button></div></label><div class="two-col"><label>Size<div class="unit-field"><input id="fontSize" type="number"/><span>px</span></div></label><label>Weight<input id="fontWeight" type="number" step="100" min="100" max="900"/></label><label>Tracking<div class="unit-field"><input id="letterSpacing" type="number" step="0.5"/><span>px</span></div></label><label>Color<input id="textColor" type="color"/></label><label>Max width<div class="unit-field"><input id="textMaxWidth" type="number"/><span>px</span></div></label></div><label class="check-row"><input id="textAutoFit" type="checkbox"/> Auto fit to max width</label></div>
 
-        <section class="tab-panel" data-panel="logo">
-          <div class="section-heading"><h2>Logo</h2><span>Built-in SVGs</span></div>
-          <div class="logo-picker" id="logoPicker"><button type="button" class="logo-choice active" data-logo-type="wordmark"><span class="logo-preview"><img src="./assets/logos/wordmark.svg" alt="" /></span><span>Wordmark</span></button><button type="button" class="logo-choice" data-logo-type="combination"><span class="logo-preview"><img src="./assets/logos/combination.svg" alt="" /></span><span>Combination</span></button><button type="button" class="logo-choice" data-logo-type="stacked"><span class="logo-preview"><img src="./assets/logos/stacked.svg" alt="" /></span><span>Stacked</span></button><button type="button" class="logo-choice" data-logo-type="lettermark"><span class="logo-preview"><img src="./assets/logos/lettermark.svg" alt="" /></span><span>Lettermark</span></button></div>
-          <label>Custom SVG / image <input id="logoFile" type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp,.svg" /></label>
-          <div class="two-col"><label>Logo width <div class="unit-field"><input id="logoSize" type="number" min="20" max="1400" step="5" value="220" /><span>px</span></div></label><label>Logo color <input id="logoColor" type="color" value="#ffffff" /></label></div>
-        </section>
+        <div id="imageControls" class="inspector-section" hidden><div class="mini-heading"><strong>Image / SVG</strong><span>logo is just an image layer now</span></div><label>Built-in asset<select id="imageAsset"><option value="wordmark">Wordmark</option><option value="combination">Combination</option><option value="stacked">Stacked</option><option value="lettermark">Lettermark</option><option value="custom">Custom…</option></select></label><input id="imageFile" type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp,.svg" hidden/><p id="imageFileName" class="hint"></p><div class="two-col"><label>Width<div class="unit-field"><input id="imageWidth" type="number" min="10" step="5"/><span>px</span></div></label><label>Tint<input id="imageTint" type="color"/></label></div></div>
+        <div id="nullHint" class="inspector-section" hidden><p class="hint">Nulls do not render. Animate their A→B transform, then parent Text/Image/other Null layers to them.</p></div>
+      </section>
 
-        <section class="tab-panel" data-panel="motion">
-          <div class="section-heading"><h2>Motion</h2><span id="motionLayerLabel">Logo layer</span></div>
-          <div class="layer-identity"><div><span id="layerTypeBadge" class="type-badge">Logo</span><input id="layerName" type="text" value="Logo" aria-label="Layer name" /></div><button id="deleteLayerBtn" type="button" class="danger-button" hidden>Delete null</button></div>
-          <label>Parent<select id="parentLayer"><option value="">None</option></select></label>
+      <section class="tab-panel" data-panel="motion">
+        <div class="section-heading"><h2>Motion</h2><span>selected layer only</span></div>
+        <div id="revealSection" class="inspector-section"><div class="mini-heading"><strong>Quick reveal</strong><label class="tiny-switch"><input id="revealEnabled" type="checkbox"/> Enabled</label></div><div class="preset-row"><button data-reveal-preset="smooth">Smooth</button><button data-reveal-preset="snappy">Snappy</button><button data-reveal-preset="soft">Soft</button><button data-reveal-preset="pop">Pop</button></div><div class="two-col"><label>Start<div class="unit-field"><input id="revealStart" type="number" min="0"/><span>ms</span></div></label><label>Enter<div class="unit-field"><input id="enterDuration" type="number" min="0"/><span>ms</span></div></label><label>Hold<div class="unit-field"><input id="holdDuration" type="number" min="0"/><span>ms</span></div></label><label>Exit<div class="unit-field"><input id="exitDuration" type="number" min="0"/><span>ms</span></div></label><label>Enter<select id="enterDirection"><option value="from-bottom">From bottom</option><option value="from-top">From top</option><option value="from-left">From left</option><option value="from-right">From right</option><option value="none">None</option></select></label><label>Exit<select id="exitDirection"><option value="to-top">To top</option><option value="to-bottom">To bottom</option><option value="to-left">To left</option><option value="to-right">To right</option><option value="none">None</option></select></label><label>Travel<div class="unit-field"><input id="revealTravel" type="number"/><span>px</span></div></label><label>Start scale<input id="revealScale" type="number" step="0.01"/></label></div><label id="wordStaggerWrap">Word stagger<input id="wordStagger" type="range" min="0" max="200" step="5"/><output id="wordStaggerOut"></output></label></div>
 
-          <div id="lifecycleControls" class="inspector-section">
-            <div class="mini-heading"><strong>Lifecycle</strong><span>Convenience animation</span></div>
-            <div class="preset-row"><button type="button" data-motion-preset="smooth">Smooth</button><button type="button" data-motion-preset="snappy">Snappy</button><button type="button" data-motion-preset="soft">Soft</button><button type="button" data-motion-preset="pop">Pop</button></div>
-            <label>Mode<select id="flowMode"><option value="in-hold-out" selected>In → Hold → Out</option><option value="in-only">In only</option><option value="out-only">Out only</option><option value="in-out">In → Out</option><option value="in-stay">In → Stay</option><option value="static">Static</option></select></label>
-            <div class="two-col"><label>Layer start <div class="unit-field"><input id="layerStart" type="number" min="0" max="10000" step="10" value="0" /><span>ms</span></div></label><label>Enter <div class="unit-field"><input id="enterDuration" type="number" min="0" max="5000" step="25" value="850" /><span>ms</span></div></label><label>Hold <div class="unit-field"><input id="holdDuration" type="number" min="0" max="10000" step="25" value="350" /><span>ms</span></div></label><label>Exit <div class="unit-field"><input id="exitDuration" type="number" min="0" max="5000" step="25" value="750" /><span>ms</span></div></label><label>Enter direction<select id="enterDirection"><option value="from-bottom" selected>From bottom</option><option value="from-top">From top</option><option value="from-left">From left</option><option value="from-right">From right</option><option value="none">None</option></select></label><label>Exit direction<select id="exitDirection"><option value="to-top" selected>To top</option><option value="to-bottom">To bottom</option><option value="to-left">To left</option><option value="to-right">To right</option><option value="none">None</option></select></label><label>Travel <div class="unit-field"><input id="layerTravel" type="number" min="0" max="800" step="5" value="50" /><span>px</span></div></label><label>Start scale <div class="unit-field"><input id="layerScale" type="number" min="0" max="3" step="0.01" value="0.94" /><span>×</span></div></label></div>
-            <label id="staggerControl">Word stagger <input id="wordStagger" type="range" min="0" max="200" step="5" value="35" /><output id="wordStaggerOut">35 ms</output></label>
-          </div>
+        <div class="inspector-section transform-section"><div class="mini-heading"><strong>Transform A → B</strong><label class="tiny-switch"><input id="transformEnabled" type="checkbox"/> Enabled</label></div><div class="preset-row"><button data-transform-preset="rise">Rise</button><button data-transform-preset="slide-left">Slide L</button><button data-transform-preset="slide-right">Slide R</button><button data-transform-preset="pop">Pop</button><button data-transform-preset="spin">Spin</button></div><div class="two-col"><label>Start<div class="unit-field"><input id="transformStart" type="number" min="0"/><span>ms</span></div></label><label>Duration<div class="unit-field"><input id="transformDuration" type="number" min="1"/><span>ms</span></div></label></div>
+          <div class="ab-grid"><div class="keyframe-card"><div class="keyframe-title"><span class="diamond-dot"></span><strong>A</strong></div><label>X<div class="unit-field"><input id="posAX" type="number"/><span>px</span></div></label><label>Y<div class="unit-field"><input id="posAY" type="number"/><span>px</span></div></label><label>Scale<input id="scaleA" type="number" step="0.01"/></label><label>Rotation<div class="unit-field"><input id="rotA" type="number"/><span>°</span></div></label><label>Opacity<input id="opacityA" type="number" min="0" max="1" step="0.01"/></label><button id="copyAToB" class="secondary compact">Copy A → B</button></div><div class="keyframe-card"><div class="keyframe-title"><span class="diamond-dot"></span><strong>B</strong></div><label>X<div class="unit-field"><input id="posBX" type="number"/><span>px</span></div></label><label>Y<div class="unit-field"><input id="posBY" type="number"/><span>px</span></div></label><label>Scale<input id="scaleB" type="number" step="0.01"/></label><label>Rotation<div class="unit-field"><input id="rotB" type="number"/><span>°</span></div></label><label>Opacity<input id="opacityB" type="number" min="0" max="1" step="0.01"/></label><button id="copyBToA" class="secondary compact">Copy B → A</button></div></div>
+          <p class="hint">Drag A/B diamonds in the timeline to retime this clip. Drag the line to move the whole clip.</p>
+        </div>
 
-          <div class="inspector-section position-card">
-            <div class="mini-heading"><strong>Position A → B</strong><label class="tiny-switch"><input id="positionEnabled" type="checkbox" /> Enabled</label></div>
-            <div class="two-col"><label>Start <div class="unit-field"><input id="positionStart" type="number" min="0" max="20000" step="10" value="0" /><span>ms</span></div></label><label>Duration <div class="unit-field"><input id="positionDuration" type="number" min="1" max="20000" step="10" value="850" /><span>ms</span></div></label></div>
-            <div class="keyframe-grid"><div class="keyframe-block"><span class="keyframe-label"><i></i>A</span><label>X <div class="unit-field"><input id="positionFromX" type="number" min="-5000" max="5000" step="1" value="0" /><span>px</span></div></label><label>Y <div class="unit-field"><input id="positionFromY" type="number" min="-5000" max="5000" step="1" value="0" /><span>px</span></div></label></div><div class="keyframe-arrow">→</div><div class="keyframe-block"><span class="keyframe-label"><i></i>B</span><label>X <div class="unit-field"><input id="positionToX" type="number" min="-5000" max="5000" step="1" value="0" /><span>px</span></div></label><label>Y <div class="unit-field"><input id="positionToY" type="number" min="-5000" max="5000" step="1" value="0" /><span>px</span></div></label></div></div>
-            <div class="position-actions"><button id="swapPositionBtn" type="button" class="secondary compact">Swap A / B</button><button id="zeroPositionBtn" type="button" class="secondary compact">Zero</button></div>
-            <p class="hint">Drag the blue A/B diamonds in the timeline to retime the position animation. Drag the line between them to move the whole clip.</p>
-          </div>
+        <div class="curve-card"><div class="mini-heading"><strong>Curve library</strong><span>save once, reuse everywhere</span></div><div class="two-col"><label>Apply to<select id="curveTarget"><option value="transform">Transform A → B</option><option value="enter">Reveal entrance</option><option value="exit">Reveal exit</option></select></label><label>Preset<select id="curvePreset"></select></label></div><div class="curve-save-row"><input id="curvePresetName" placeholder="My curve name"/><button id="saveCurvePresetBtn" class="secondary compact">Save</button><button id="deleteCurvePresetBtn" class="icon-button small">×</button></div><svg id="curveViz" viewBox="0 0 260 170"><path class="curve-grid" d="M20 20H240M20 63.3H240M20 106.6H240M20 150H240M20 20V150M93.3 20V150M166.6 20V150M240 20V150"/><path class="guide" id="guide1"/><path class="guide" id="guide2"/><path class="curve" id="curvePath"/><circle class="handle" id="handle1" r="6"/><circle class="handle" id="handle2" r="6"/></svg><div class="four-col"><label>x1<input id="x1" type="number" step="0.01"/></label><label>y1<input id="y1" type="number" step="0.01"/></label><label>x2<input id="x2" type="number" step="0.01"/></label><label>y2<input id="y2" type="number" step="0.01"/></label></div></div>
+      </section>
 
-          <div class="curve-card">
-            <div class="mini-heading"><strong>Curve library</strong><span>Reusable easing</span></div>
-            <div class="group-title-row"><label>Apply to<select id="curveTarget"><option value="position" selected>Position A → B</option><option value="enter">Entrance</option><option value="exit">Exit</option></select></label><label>Preset<select id="curvePreset"></select></label></div>
-            <div class="curve-save-row"><input id="curvePresetName" type="text" maxlength="32" placeholder="My curve name" /><button id="saveCurvePresetBtn" type="button" class="secondary compact">Save curve</button><button id="deleteCurvePresetBtn" type="button" class="icon-button small" title="Delete selected custom curve" disabled>×</button></div>
-            <svg id="curveViz" viewBox="0 0 260 170" role="img" aria-label="Cubic Bézier curve editor"><path class="curve-grid" d="M20 20H240M20 63.3H240M20 106.6H240M20 150H240M20 20V150M93.3 20V150M166.6 20V150M240 20V150"/><path class="grid-line" d="M20 150H240M20 20V150"/><path class="guide" id="guide1"/><path class="guide" id="guide2"/><path class="curve" id="curvePath"/><circle class="curve-endpoint" cx="20" cy="150" r="3"/><circle class="curve-endpoint" cx="240" cy="63" r="3"/><circle class="handle" id="handle1" r="6" tabindex="0"/><circle class="handle" id="handle2" r="6" tabindex="0"/></svg>
-            <div class="four-col"><label>x1 <input id="x1" type="number" min="0" max="1" step="0.01" value="0.05" /></label><label>y1 <input id="y1" type="number" min="-2" max="3" step="0.01" value="0.9" /></label><label>x2 <input id="x2" type="number" min="0" max="1" step="0.01" value="0.1" /></label><label>y2 <input id="y2" type="number" min="-2" max="3" step="0.01" value="1" /></label></div>
-          </div>
-        </section>
+      <section class="tab-panel" data-panel="canvas"><div class="section-heading"><h2>Canvas</h2><span>composition</span></div><label>Preset<select id="canvasPreset"><option value="custom">Custom</option><option value="1:1">1:1 · 1080×1080</option><option value="16:9">16:9 · 1920×1080</option><option value="9:16">9:16 · 1080×1920</option><option value="4:5">4:5 · 1080×1350</option><option value="4:3">4:3 · 1200×900</option><option value="banner">Banner · 1200×400</option></select></label><div class="two-col"><label>Width<div class="unit-field"><input id="canvasWidth" type="number"/><span>px</span></div></label><label>Height<div class="unit-field"><input id="canvasHeight" type="number"/><span>px</span></div></label><label>Background<input id="bgColor" type="color"/></label><label>Safe X<div class="unit-field"><input id="marginX" type="number"/><span>px</span></div></label><label>Safe Y<div class="unit-field"><input id="marginY" type="number"/><span>px</span></div></label></div><label class="check-row"><input id="showMargins" type="checkbox"/> Safe guides</label><label class="check-row"><input id="showGrid" type="checkbox"/> Grid</label></section>
 
-        <section class="tab-panel" data-panel="canvas">
-          <div class="section-heading"><h2>Canvas</h2><span>Exact output size</span></div>
-          <label>Preset<select id="canvasPreset"><option value="custom" selected>Current / custom (800×450)</option><option value="1:1">1:1 Square (1080×1080)</option><option value="16:9">16:9 Landscape (1920×1080)</option><option value="9:16">9:16 Story / Reel (1080×1920)</option><option value="4:5">4:5 Social (1080×1350)</option><option value="4:3">4:3 Standard (1200×900)</option><option value="banner">Wide Banner (1200×400)</option></select></label>
-          <div class="two-col"><label>Width <div class="unit-field"><input id="canvasWidth" type="number" min="120" max="4096" step="1" value="800" /><span>px</span></div></label><label>Height <div class="unit-field"><input id="canvasHeight" type="number" min="120" max="4096" step="1" value="450" /><span>px</span></div></label><label>Background <input id="bgColor" type="color" value="#103e36" /></label><label>Safe X <div class="unit-field"><input id="marginX" type="number" min="0" max="1200" step="5" value="60" /><span>px</span></div></label><label>Safe Y <div class="unit-field"><input id="marginY" type="number" min="0" max="1200" step="5" value="40" /><span>px</span></div></label></div>
-          <label class="check-row"><input id="showMargins" type="checkbox" checked /> Show safe-area guides</label><label class="check-row"><input id="showGrid" type="checkbox" /> Show grid</label>
-        </section>
-
-        <section class="tab-panel" data-panel="export">
-          <div class="section-heading"><h2>Export</h2><span>Same renderer as preview</span></div>
-          <div class="two-col"><label>Format<select id="exportFormat"><option value="gif" selected>GIF</option></select></label><label>GIF FPS <input id="fps" type="number" min="8" max="60" step="1" value="30" /></label><label>Resolution<select id="exportScale"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label><label>Colors<select id="gifColors"><option value="64">64</option><option value="128">128</option><option value="256" selected>256</option></select></label></div>
-          <label class="check-row"><input id="gifLoop" type="checkbox" checked /> Loop exported GIF</label>
-          <div class="export-summary"><span>Output</span><strong id="outputSizeReadout">800 × 450</strong></div><div class="export-summary"><span>Estimated frames</span><strong id="frameEstimate">63</strong></div>
-          <button id="exportBtn" type="button" class="primary-button full-width">Export animated GIF</button><button id="pngBtn" type="button" class="secondary full-width">Download current frame PNG</button>
-          <progress id="exportProgress" max="1" value="0"></progress><p id="status" role="status" aria-live="polite">Ready.</p>
-          <div class="setup-actions"><button id="downloadSetupBtn" type="button" class="secondary">Download setup JSON</button><button id="loadSetupBtn" type="button" class="secondary">Load setup JSON</button><input id="setupFile" type="file" accept="application/json,.json" hidden /></div>
-        </section>
-      </div>
-    </aside>
-  </main>
-  <script type="module" src="./app.js"></script>
+      <section class="tab-panel" data-panel="export"><div class="section-heading"><h2>Export</h2><span>same renderer as preview</span></div><div class="two-col"><label>FPS<input id="fps" type="number" min="8" max="60"/></label><label>Scale<select id="exportScale"><option value="0.5">0.5×</option><option value="1">1×</option><option value="2">2×</option></select></label><label>GIF colors<select id="gifColors"><option value="64">64</option><option value="128">128</option><option value="256">256</option></select></label></div><label class="check-row"><input id="gifLoop" type="checkbox"/> Loop exported GIF</label><div class="export-summary"><span>Output</span><strong id="outputSizeReadout"></strong></div><div class="export-summary"><span>Frames</span><strong id="frameEstimate"></strong></div><button id="exportBtn" class="primary-button full-width">Export GIF</button><button id="pngBtn" class="secondary full-width">Current frame PNG</button><progress id="exportProgress" max="1" value="0"></progress><p id="status" class="hint">Ready.</p><div class="setup-actions"><button id="downloadSetupBtn" class="secondary">Download setup JSON</button><button id="loadSetupBtn" class="secondary">Load setup JSON</button><input id="setupFile" type="file" accept="application/json,.json" hidden/></div></section>
+    </div>
+  </aside>
+</main>
+<script type="module" src="./app.js"></script>
 </body>
 </html>
