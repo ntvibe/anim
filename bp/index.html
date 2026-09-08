@@ -1,1 +1,150 @@
-__PLACEHOLDER__
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <title>Bitpanda Lockup Animator</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main id="preview">
+    <div id="stageShell">
+      <div id="artboard">
+        <div id="lockup">
+          <div id="portal">
+            <div id="wordmark"><img src="./wordmark.svg" alt="Bitpanda" /></div>
+            <div id="customText">Für alle, die handeln.</div>
+          </div>
+          <div id="logoBox"><div id="logoAnim"></div></div>
+        </div>
+      </div>
+      <div id="phase">loading</div>
+    </div>
+  </main>
+
+  <aside id="panel">
+    <h1>Bitpanda lockup animator</h1>
+    <p class="lede">The B is the visual portal: the wordmark slides behind it and the custom text slides out from behind it. No opacity fades.</p>
+
+    <div class="control">
+      <div class="labelrow"><label for="text">Custom text</label></div>
+      <input id="text" type="text" value="Für alle, die handeln." />
+    </div>
+
+    <div class="control">
+      <div class="labelrow"><label for="textSize">Text size</label><span class="value" id="textSizeV">154 px</span></div>
+      <input id="textSize" type="range" min="70" max="210" step="1" value="154" />
+    </div>
+
+    <div class="control">
+      <div class="labelrow"><label for="logoSpeed">B animation speed</label><span class="value" id="logoSpeedV">1.00×</span></div>
+      <input id="logoSpeed" type="range" min=".1" max="4" step=".05" value="1" />
+    </div>
+
+    <div class="control">
+      <div class="labelrow"><label for="startHold">Initial hold</label><span class="value" id="startHoldV">2.00 s</span></div>
+      <input id="startHold" type="range" min="0" max="6" step=".05" value="2" />
+    </div>
+
+    <div class="control">
+      <div class="labelrow"><label for="endHold">Final hold</label><span class="value" id="endHoldV">2.96 s</span></div>
+      <input id="endHold" type="range" min="0" max="8" step=".05" value="2.96" />
+    </div>
+
+    <details open>
+      <summary>Transitions</summary>
+      <div class="control">
+        <div class="labelrow"><label for="wordmarkDur">Wordmark → B</label><span class="value" id="wordmarkDurV">0.40 s</span></div>
+        <input id="wordmarkDur" type="range" min=".1" max="2" step=".02" value=".40" />
+      </div>
+      <div class="control">
+        <div class="labelrow"><label for="centerPause">B-only pause</label><span class="value" id="centerPauseV">0.32 s</span></div>
+        <input id="centerPause" type="range" min="0" max="2" step=".02" value=".32" />
+      </div>
+      <div class="control">
+        <div class="labelrow"><label for="textDur">Text ← B</label><span class="value" id="textDurV">1.28 s</span></div>
+        <input id="textDur" type="range" min=".2" max="3" step=".02" value="1.28" />
+      </div>
+      <div class="control">
+        <div class="labelrow"><label for="preLogoHold">Hold before B animation</label><span class="value" id="preLogoHoldV">1.04 s</span></div>
+        <input id="preLogoHold" type="range" min="0" max="4" step=".02" value="1.04" />
+      </div>
+    </details>
+
+    <details open>
+      <summary>Cubic Bézier curves</summary>
+      <div class="control">
+        <div class="labelrow"><label for="curveTarget">Editing curve</label><span class="value" id="curveValue">0.35, 0.00, 0.18, 1.00</span></div>
+        <select id="curveTarget">
+          <option value="wordmark">Wordmark into B</option>
+          <option value="text">Text out of B</option>
+          <option value="layout">Lockup recenter</option>
+        </select>
+      </div>
+
+      <svg id="curveSvg" viewBox="0 0 300 170" aria-label="Cubic Bézier editor">
+        <line class="axis" x1="28" y1="142" x2="272" y2="142" />
+        <line class="axis" x1="28" y1="142" x2="28" y2="28" />
+        <line class="handleLine" id="h1line" />
+        <line class="handleLine" id="h2line" />
+        <path id="curvePath" />
+        <circle class="handle" id="h1" r="7" />
+        <circle class="handle" id="h2" r="7" />
+      </svg>
+
+      <div class="grid4">
+        <label>X1<input id="x1" type="number" min="0" max="1" step=".01" /></label>
+        <label>Y1<input id="y1" type="number" min="-1" max="2" step=".01" /></label>
+        <label>X2<input id="x2" type="number" min="0" max="1" step=".01" /></label>
+        <label>Y2<input id="y2" type="number" min="-1" max="2" step=".01" /></label>
+      </div>
+      <div class="presetRow">
+        <button data-preset="linear">Linear</button>
+        <button data-preset="ease">Ease</button>
+        <button data-preset="out">Ease out</button>
+        <button data-preset="snappy">Snappy</button>
+      </div>
+    </details>
+
+    <details>
+      <summary>Layout</summary>
+      <div class="control">
+        <div class="labelrow"><label for="gap">Gap</label><span class="value" id="gapV">54 px</span></div>
+        <input id="gap" type="range" min="0" max="120" step="1" value="54" />
+      </div>
+      <div class="control">
+        <div class="labelrow"><label for="tracking">Tracking</label><span class="value" id="trackingV">-2.5 px</span></div>
+        <input id="tracking" type="range" min="-8" max="8" step=".2" value="-2.5" />
+      </div>
+      <div class="control">
+        <div class="labelrow"><label for="portalOverlap">Portal overlap into B</label><span class="value" id="portalOverlapV">37 px</span></div>
+        <input id="portalOverlap" type="range" min="10" max="80" step="1" value="37" />
+      </div>
+    </details>
+
+    <div class="buttons"><button id="playPause">Pause</button><button id="restart">Restart</button></div>
+    <div class="control">
+      <div class="labelrow"><label for="scrub">Timeline</label><span class="value" id="timeV">0.00 s</span></div>
+      <input id="scrub" type="range" min="0" max="10" step=".01" value="0" />
+    </div>
+    <label class="checkrow"><input id="loop" type="checkbox" checked /> Loop</label>
+    <div class="meta">
+      <span>B range</span><span>0–50 @ 25 fps</span>
+      <span>B duration</span><span id="logoDur">2.00 s</span>
+      <span>Total</span><span id="totalDur">10.00 s</span>
+      <span>Text width</span><span id="textWidthV">—</span>
+    </div>
+    <div id="err"></div>
+  </aside>
+
+  <script src="./data-part0.js"></script>
+  <script src="./data-part1.js"></script>
+  <script src="./data-part2.js"></script>
+  <script src="./data-part3.js"></script>
+  <script src="./data-part4.js"></script>
+  <script src="./data-part5.js"></script>
+  <script src="./data-part6.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
