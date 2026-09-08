@@ -4,6 +4,7 @@ Small browser-based motion experiments for replacing repetitive After Effects ta
 
 ## Experiments
 
+- [`bp`](./bp/) — Bitpanda lockup animator using the AE-derived vector B animation, exact supplied wordmark SVG, masked wordmark/custom-text transitions, timing controls, and independent cubic Bézier curves.
 - [`01-bezier-logo-text`](./experiments/01-bezier-logo-text/) — deterministic Canvas animation with one shared cubic Bézier curve, separate logo/text motion recipes, live preview, and GIF export.
 
 ## Philosophy
