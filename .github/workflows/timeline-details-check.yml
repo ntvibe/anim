@@ -1,0 +1,17 @@
+name: Timeline details syntax check
+on:
+  push:
+    branches: [expandable-timeline-curves]
+  workflow_dispatch:
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check expandable timeline files
+        run: |
+          node --check experiments/01-bezier-logo-text/timeline-details.js
+          node --check experiments/01-bezier-logo-text/boot-guard.js
+          grep -q "inline-curve-handle" experiments/01-bezier-logo-text/timeline-details.js
+          grep -q "Transform curve" experiments/01-bezier-logo-text/timeline-details.js
+          grep -q "layer-disclosure" experiments/01-bezier-logo-text/timeline-details.css
