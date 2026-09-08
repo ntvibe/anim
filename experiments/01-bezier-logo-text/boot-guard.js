@@ -50,8 +50,8 @@
 
     appendStylesheet('./enhancements.css?v=6.3.0');
     appendModule('./enhancements.js?v=6.3.0');
-    appendStylesheet('./timeline-details.css?v=6.5.0');
-    appendModule('./timeline-details.js?v=6.5.0');
+    appendStylesheet('./timeline-details.css?v=6.6.0');
+    appendModule('./timeline-details.js?v=6.6.0');
 
     const mobileTimeline = window.matchMedia?.('(max-width: 820px)').matches || window.matchMedia?.('(pointer: coarse)').matches;
     if (mobileTimeline) {
@@ -85,7 +85,6 @@
     let retry = 0;
     try { retry = Number(sessionStorage.getItem(RETRY_KEY) || 0); } catch {}
 
-    // First recovery pass: discard only the newest potentially-corrupt save.
     if (retry === 0) {
       try {
         sessionStorage.setItem(RETRY_KEY, '1');
@@ -95,7 +94,6 @@
       return;
     }
 
-    // Second pass: fall back to a completely clean project.
     if (retry === 1) {
       try {
         sessionStorage.setItem(RETRY_KEY, '2');
